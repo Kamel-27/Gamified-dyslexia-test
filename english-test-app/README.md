@@ -81,6 +81,13 @@ npm install
 npm run dev
 ```
 
+Create `.env.local` from `.env.example` and point it to your backend:
+
+```bash
+FASTAPI_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+```
+
 Open http://localhost:3000
 
 ## Quality Checks
