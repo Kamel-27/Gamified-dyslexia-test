@@ -11,6 +11,22 @@ type StudentsResponse = {
   students: StudentWithAttempts[];
 };
 
+async function parseApiPayload(response: Response) {
+  const text = await response.text();
+  if (!text.trim()) {
+    return {} as { error?: string };
+  }
+
+  try {
+    return JSON.parse(text) as
+      | { error?: string }
+      | StudentsResponse
+      | { sessionId?: string };
+  } catch {
+    return { error: "Received an invalid response from the server." };
+  }
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [students, setStudents] = useState<StudentWithAttempts[]>([]);
@@ -30,15 +46,21 @@ export default function DashboardPage() {
 
     try {
       const response = await fetch("/api/students", { cache: "no-store" });
-      const payload = (await response.json()) as StudentsResponse | { error?: string };
+      const payload = (await parseApiPayload(response)) as
+        | StudentsResponse
+        | { error?: string };
 
       if (!response.ok || !("students" in payload)) {
-        throw new Error(("error" in payload && payload.error) || "Unable to load students.");
+        throw new Error(
+          ("error" in payload && payload.error) || "Unable to load students.",
+        );
       }
 
       setStudents(payload.students);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unexpected error.");
+      setError(
+        loadError instanceof Error ? loadError.message : "Unexpected error.",
+      );
     } finally {
       setLoading(false);
     }
@@ -63,7 +85,7 @@ export default function DashboardPage() {
         }),
       });
 
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await parseApiPayload(response)) as { error?: string };
       if (!response.ok) {
         throw new Error(payload.error ?? "Unable to create student.");
       }
@@ -71,7 +93,11 @@ export default function DashboardPage() {
       setName("");
       await loadStudents();
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Unexpected error.");
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : "Unexpected error.",
+      );
     } finally {
       setSaving(false);
     }
@@ -87,14 +113,19 @@ export default function DashboardPage() {
         body: JSON.stringify({ studentId }),
       });
 
-      const payload = (await response.json()) as { sessionId?: string; error?: string };
+      const payload = (await parseApiPayload(response)) as {
+        sessionId?: string;
+        error?: string;
+      };
       if (!response.ok || !payload.sessionId) {
         throw new Error(payload.error ?? "Unable to start test.");
       }
 
       router.push(`/test/${payload.sessionId}`);
     } catch (startError) {
-      setError(startError instanceof Error ? startError.message : "Unexpected error.");
+      setError(
+        startError instanceof Error ? startError.message : "Unexpected error.",
+      );
     }
   }
 
@@ -111,10 +142,14 @@ export default function DashboardPage() {
                 Students and Assessment History
               </h1>
               <p className="mt-2 text-sm text-slate-600">
-                Add a student once, then start tests using saved demographic data.
+                Add a student once, then start tests using saved demographic
+                data.
               </p>
             </div>
-            <Link href="/" className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+            <Link
+              href="/"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+            >
               Back to Landing
             </Link>
           </div>
@@ -125,11 +160,16 @@ export default function DashboardPage() {
             onSubmit={handleCreateStudent}
             className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
           >
-            <h2 className="text-lg font-semibold text-slate-900">Add Student</h2>
+            <h2 className="text-lg font-semibold text-slate-900">
+              Add Student
+            </h2>
 
             <div className="mt-4 grid gap-4">
               <div>
-                <label htmlFor="name" className="text-sm font-medium text-slate-700">
+                <label
+                  htmlFor="name"
+                  className="text-sm font-medium text-slate-700"
+                >
                   Full Name
                 </label>
                 <input
@@ -143,7 +183,10 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <label htmlFor="age" className="text-sm font-medium text-slate-700">
+                <label
+                  htmlFor="age"
+                  className="text-sm font-medium text-slate-700"
+                >
                   Age (7-17)
                 </label>
                 <input
@@ -159,7 +202,10 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <label htmlFor="gender" className="text-sm font-medium text-slate-700">
+                <label
+                  htmlFor="gender"
+                  className="text-sm font-medium text-slate-700"
+                >
                   Gender
                 </label>
                 <select
@@ -179,7 +225,9 @@ export default function DashboardPage() {
                   checked={nativeLang}
                   onChange={(event) => setNativeLang(event.target.checked)}
                 />
-                <span className="text-sm text-slate-700">English is native language</span>
+                <span className="text-sm text-slate-700">
+                  English is native language
+                </span>
               </label>
 
               <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
@@ -188,7 +236,9 @@ export default function DashboardPage() {
                   checked={otherLang}
                   onChange={(event) => setOtherLang(event.target.checked)}
                 />
-                <span className="text-sm text-slate-700">Speaks another language</span>
+                <span className="text-sm text-slate-700">
+                  Speaks another language
+                </span>
               </label>
 
               <button
@@ -202,10 +252,16 @@ export default function DashboardPage() {
           </form>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">Existing Students</h2>
+            <h2 className="text-lg font-semibold text-slate-900">
+              Existing Students
+            </h2>
 
-            {loading ? <p className="mt-4 text-sm text-slate-600">Loading students...</p> : null}
-            {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
+            {loading ? (
+              <p className="mt-4 text-sm text-slate-600">Loading students...</p>
+            ) : null}
+            {error ? (
+              <p className="mt-4 text-sm text-red-700">{error}</p>
+            ) : null}
 
             {!loading && students.length === 0 ? (
               <p className="mt-4 text-sm text-slate-600">
@@ -215,12 +271,19 @@ export default function DashboardPage() {
 
             <div className="mt-4 grid gap-4">
               {students.map((student) => (
-                <article key={student.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <article
+                  key={student.id}
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <h3 className="text-lg font-semibold text-slate-900">{student.name}</h3>
+                      <h3 className="text-lg font-semibold text-slate-900">
+                        {student.name}
+                      </h3>
                       <p className="text-sm text-slate-600">
-                        Age {student.demographics.age} | {student.demographics.gender} | Native English: {student.demographics.nativeLang ? "Yes" : "No"}
+                        Age {student.demographics.age} |{" "}
+                        {student.demographics.gender} | Native English:{" "}
+                        {student.demographics.nativeLang ? "Yes" : "No"}
                       </p>
                     </div>
 
@@ -239,13 +302,22 @@ export default function DashboardPage() {
                     </p>
 
                     {student.attempts.length === 0 ? (
-                      <p className="mt-2 text-sm text-slate-600">No attempts yet.</p>
+                      <p className="mt-2 text-sm text-slate-600">
+                        No attempts yet.
+                      </p>
                     ) : (
                       <div className="mt-2 space-y-2">
                         {student.attempts.slice(0, 6).map((attempt) => (
-                          <div key={attempt.sessionId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                          <div
+                            key={attempt.sessionId}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2"
+                          >
                             <div className="text-sm text-slate-700">
-                              <span className="font-semibold">{new Date(attempt.startedAt).toLocaleDateString()}</span>
+                              <span className="font-semibold">
+                                {new Date(
+                                  attempt.startedAt,
+                                ).toLocaleDateString()}
+                              </span>
                               <span className="ml-2 text-slate-500">
                                 {attempt.riskDetected === undefined
                                   ? "In progress"

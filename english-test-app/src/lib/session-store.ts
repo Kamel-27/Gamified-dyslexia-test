@@ -6,6 +6,7 @@ import {
   readFileSync,
   writeFileSync,
 } from "fs";
+import os from "os";
 import path from "path";
 import {
   Demographics,
@@ -14,7 +15,12 @@ import {
   SessionResult,
 } from "@/lib/types";
 
-const SESSION_DIR = path.join(process.cwd(), ".runtime-sessions");
+const RUNTIME_BASE_DIR =
+  process.env.RUNTIME_DATA_DIR?.trim() ||
+  (process.env.VERCEL
+    ? path.join(os.tmpdir(), "english-test-app")
+    : process.cwd());
+const SESSION_DIR = path.join(RUNTIME_BASE_DIR, ".runtime-sessions");
 
 function ensureSessionDir() {
   if (!existsSync(SESSION_DIR)) {
@@ -102,12 +108,16 @@ export function completeSession(sessionId: string, result: SessionResult) {
 }
 
 export function listSessions() {
-  ensureSessionDir();
-  const fileNames = readdirSync(SESSION_DIR).filter((name) =>
-    name.toLowerCase().endsWith(".json"),
-  );
+  try {
+    ensureSessionDir();
+    const fileNames = readdirSync(SESSION_DIR).filter((name) =>
+      name.toLowerCase().endsWith(".json"),
+    );
 
-  return fileNames
-    .map((name) => readSession(path.basename(name, ".json")))
-    .filter((session): session is SessionRecord => Boolean(session));
+    return fileNames
+      .map((name) => readSession(path.basename(name, ".json")))
+      .filter((session): session is SessionRecord => Boolean(session));
+  } catch {
+    return [];
+  }
 }

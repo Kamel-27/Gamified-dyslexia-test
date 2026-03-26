@@ -1,10 +1,6 @@
 import { randomUUID } from "crypto";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import os from "os";
 import path from "path";
 import {
   Demographics,
@@ -14,7 +10,12 @@ import {
 } from "@/lib/types";
 import { listSessions } from "@/lib/session-store";
 
-const STUDENT_DIR = path.join(process.cwd(), ".runtime-students");
+const RUNTIME_BASE_DIR =
+  process.env.RUNTIME_DATA_DIR?.trim() ||
+  (process.env.VERCEL
+    ? path.join(os.tmpdir(), "english-test-app")
+    : process.cwd());
+const STUDENT_DIR = path.join(RUNTIME_BASE_DIR, ".runtime-students");
 const STUDENT_FILE = path.join(STUDENT_DIR, "students.json");
 
 type StudentDb = {
@@ -28,14 +29,18 @@ function ensureStudentDir() {
 }
 
 function readDb(): StudentDb {
-  ensureStudentDir();
-
-  if (!existsSync(STUDENT_FILE)) {
-    return { students: [] };
-  }
-
   try {
+    ensureStudentDir();
+
+    if (!existsSync(STUDENT_FILE)) {
+      return { students: [] };
+    }
+
     const raw = readFileSync(STUDENT_FILE, "utf-8");
+    if (!raw.trim()) {
+      return { students: [] };
+    }
+
     const parsed = JSON.parse(raw) as StudentDb;
     return {
       students: Array.isArray(parsed.students) ? parsed.students : [],
@@ -46,8 +51,13 @@ function readDb(): StudentDb {
 }
 
 function writeDb(db: StudentDb) {
-  ensureStudentDir();
-  writeFileSync(STUDENT_FILE, JSON.stringify(db, null, 2), "utf-8");
+  try {
+    ensureStudentDir();
+    writeFileSync(STUDENT_FILE, JSON.stringify(db, null, 2), "utf-8");
+  } catch {
+    // Surface as a consistent API error via route-level handlers.
+    throw new Error("Unable to persist student data in runtime storage.");
+  }
 }
 
 export function createStudent(name: string, demographics: Demographics) {
