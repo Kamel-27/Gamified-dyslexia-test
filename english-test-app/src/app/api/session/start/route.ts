@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     if (typeof body.studentId === "string" && body.studentId.length > 0) {
       const studentStore = useDatabase ? dbStudentStore : memoryStudentStore;
       const sessionStore = useDatabase ? dbSessionStore : memorySessionStore;
-      
+
       const student = await studentStore.getStudent(body.studentId);
       if (!student) {
         return NextResponse.json(
@@ -32,7 +32,10 @@ export async function POST(request: Request) {
         );
       }
 
-      const session = await sessionStore.createSessionForStudent(student.demographics, student.id);
+      const session = await sessionStore.createSessionForStudent(
+        student.demographics,
+        student.id,
+      );
 
       return NextResponse.json({
         sessionId: session.id,

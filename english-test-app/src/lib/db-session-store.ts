@@ -32,7 +32,9 @@ export async function createSessionForStudent(
   };
 }
 
-export async function getSession(id: string): Promise<SessionRecord | undefined> {
+export async function getSession(
+  id: string,
+): Promise<SessionRecord | undefined> {
   const session = await db.session.findUnique({
     where: { id },
     include: { events: true },
@@ -123,8 +125,14 @@ export async function listAttemptSummariesForStudent(
     sessionId: session.id,
     startedAt: session.startedAt.toISOString(),
     completedAt: session.completedAt?.toISOString(),
-    probability: (session.result as Record<string, unknown> | null)?.probability as number | undefined,
-    riskLevel: (session.result as Record<string, unknown> | null)?.riskLevel as "low" | "moderate" | "high" | undefined,
-    riskDetected: (session.result as Record<string, unknown> | null)?.riskDetected as boolean | undefined,
+    probability: (session.result as Record<string, unknown> | null)
+      ?.probability as number | undefined,
+    riskLevel: (session.result as Record<string, unknown> | null)?.riskLevel as
+      | "low"
+      | "moderate"
+      | "high"
+      | undefined,
+    riskDetected: (session.result as Record<string, unknown> | null)
+      ?.riskDetected as boolean | undefined,
   }));
 }

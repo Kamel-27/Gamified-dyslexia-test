@@ -21,7 +21,9 @@ export async function createStudent(
   };
 }
 
-export async function getStudent(id: string): Promise<StudentRecord | undefined> {
+export async function getStudent(
+  id: string,
+): Promise<StudentRecord | undefined> {
   const student = await db.student.findUnique({
     where: { id },
   });
@@ -38,7 +40,9 @@ export async function getStudent(id: string): Promise<StudentRecord | undefined>
   };
 }
 
-export async function listStudentsWithAttempts(): Promise<StudentWithAttempts[]> {
+export async function listStudentsWithAttempts(): Promise<
+  StudentWithAttempts[]
+> {
   const students = await db.student.findMany({
     orderBy: { createdAt: "desc" },
   });
