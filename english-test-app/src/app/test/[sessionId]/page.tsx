@@ -9,7 +9,7 @@ import { speakTextAndWait } from "@/lib/voice";
 const QUESTION_DURATION_SECONDS = 15;
 const LETTER_POOL = "abcdefghijklmnopqrstuvwxyz";
 const TARGET_REPEAT_COUNT = 3;
-const SHOW_SKIP_BUTTON = false;
+const SHOW_SKIP_BUTTON = true;
 const Q30_VISUAL_EXPOSURE_MS = 3000;
 const TYPE_KEYBOARD_ROWS = [
   ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],

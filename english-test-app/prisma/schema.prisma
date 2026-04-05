@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Student {
+  id          String   @id @default(uuid())
+  name        String
+  demographics Json
+  createdAt   DateTime @default(now())
+
+  sessions    Session[]
+}
+
+model Session {
+  id          String   @id @default(uuid())
+  studentId   String?
+  student     Student? @relation(fields: [studentId], references: [id])
+  demographics Json
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  result      Json?
+
+  events      SessionEvent[]
+
+  @@index([studentId])
+  @@index([startedAt])
+}
+
+model SessionEvent {
+  id        String   @id @default(uuid())
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  eventType String
+  questionId String
+  optionId  String?
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+}

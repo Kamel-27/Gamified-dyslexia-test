@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { completeSession, getSession } from "@/lib/session-store";
+import * as memorySessionStore from "@/lib/session-store";
+import * as dbSessionStore from "@/lib/db-session-store";
 import { predictRiskFromFastApi } from "@/lib/fastapi-client";
 import {
   buildModelFeaturePayload,
@@ -7,12 +8,15 @@ import {
   buildSessionResultFromProbability,
 } from "@/lib/scoring";
 
+const useDatabase = process.env.USE_DATABASE === "true";
+
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const session = getSession(id);
+  const sessionStore = useDatabase ? dbSessionStore : memorySessionStore;
+  const session = await sessionStore.getSession(id);
 
   if (!session) {
     return NextResponse.json({ error: "Session not found." }, { status: 404 });
@@ -63,7 +67,7 @@ export async function POST(
     },
   );
 
-  const completed = completeSession(id, result);
+  const completed = await sessionStore.completeSession(id, result);
 
   if (!completed) {
     return NextResponse.json(

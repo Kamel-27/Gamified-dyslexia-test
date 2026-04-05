@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { createSessionForStudent } from "@/lib/session-store";
-import { getStudent } from "@/lib/student-store";
+import * as memorySessionStore from "@/lib/session-store";
+import * as memoryStudentStore from "@/lib/student-store";
+import * as dbSessionStore from "@/lib/db-session-store";
+import * as dbStudentStore from "@/lib/db-student-store";
 import { Demographics } from "@/lib/types";
+
+const useDatabase = process.env.USE_DATABASE === "true";
 
 export async function POST(request: Request) {
   try {
@@ -17,7 +21,10 @@ export async function POST(request: Request) {
     }
 
     if (typeof body.studentId === "string" && body.studentId.length > 0) {
-      const student = getStudent(body.studentId);
+      const studentStore = useDatabase ? dbStudentStore : memoryStudentStore;
+      const sessionStore = useDatabase ? dbSessionStore : memorySessionStore;
+      
+      const student = await studentStore.getStudent(body.studentId);
       if (!student) {
         return NextResponse.json(
           { error: "Student not found." },
@@ -25,7 +32,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const session = createSessionForStudent(student.demographics, student.id);
+      const session = await sessionStore.createSessionForStudent(student.demographics, student.id);
 
       return NextResponse.json({
         sessionId: session.id,
@@ -49,7 +56,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const session = createSessionForStudent({
+    const sessionStore = useDatabase ? dbSessionStore : memorySessionStore;
+    const session = await sessionStore.createSessionForStudent({
       age: body.age,
       gender: body.gender,
       nativeLang: body.nativeLang,

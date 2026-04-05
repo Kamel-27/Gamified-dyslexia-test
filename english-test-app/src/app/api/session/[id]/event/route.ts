@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { addSessionEvent } from "@/lib/session-store";
+import * as memorySessionStore from "@/lib/session-store";
+import * as dbSessionStore from "@/lib/db-session-store";
 import { SessionEventType } from "@/lib/types";
+
+const useDatabase = process.env.USE_DATABASE === "true";
 
 function isValidEventType(value: string): value is SessionEventType {
   return value === "click" || value === "hit" || value === "miss";
@@ -30,7 +33,8 @@ export async function POST(
     );
   }
 
-  const updated = addSessionEvent(id, {
+  const sessionStore = useDatabase ? dbSessionStore : memorySessionStore;
+  const updated = await sessionStore.addSessionEvent(id, {
     questionId: body.questionId,
     optionId: body.optionId,
     eventType: body.eventType,

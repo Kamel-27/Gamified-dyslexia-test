@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { createStudent, listStudentsWithAttempts } from "@/lib/student-store";
+import * as memoryStudentStore from "@/lib/student-store";
+import * as dbStudentStore from "@/lib/db-student-store";
 import { Demographics } from "@/lib/types";
+
+const useDatabase = process.env.USE_DATABASE === "true";
 
 type CreateStudentPayload = {
   name?: string;
@@ -9,7 +12,8 @@ type CreateStudentPayload = {
 
 export async function GET() {
   try {
-    const students = listStudentsWithAttempts();
+    const studentStore = useDatabase ? dbStudentStore : memoryStudentStore;
+    const students = await studentStore.listStudentsWithAttempts();
     return NextResponse.json({ students });
   } catch (error) {
     return NextResponse.json(
@@ -49,7 +53,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const student = createStudent(body.name.trim(), {
+    const studentStore = useDatabase ? dbStudentStore : memoryStudentStore;
+    const student = await studentStore.createStudent(body.name.trim(), {
       age: demographics.age,
       gender: demographics.gender,
       nativeLang: demographics.nativeLang,

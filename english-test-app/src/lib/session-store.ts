@@ -1,88 +1,49 @@
-import { randomUUID } from "crypto";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "fs";
-import os from "os";
-import path from "path";
 import {
   Demographics,
-  SessionEvent,
   SessionRecord,
   SessionResult,
+  StudentAttemptSummary,
 } from "@/lib/types";
 
-const RUNTIME_BASE_DIR =
-  process.env.RUNTIME_DATA_DIR?.trim() ||
-  (process.env.VERCEL
-    ? path.join(os.tmpdir(), "english-test-app")
-    : process.cwd());
-const SESSION_DIR = path.join(RUNTIME_BASE_DIR, ".runtime-sessions");
+type SessionEventInput = {
+  eventType: "click" | "hit" | "miss";
+  questionId: string;
+  optionId?: string;
+};
 
-function ensureSessionDir() {
-  if (!existsSync(SESSION_DIR)) {
-    mkdirSync(SESSION_DIR, { recursive: true });
-  }
-}
+const sessionsById = new Map<string, SessionRecord>();
 
-function getSessionPath(sessionId: string) {
-  return path.join(SESSION_DIR, `${sessionId}.json`);
-}
-
-function writeSession(record: SessionRecord) {
-  ensureSessionDir();
-  writeFileSync(
-    getSessionPath(record.id),
-    JSON.stringify(record, null, 2),
-    "utf-8",
-  );
-}
-
-function readSession(sessionId: string) {
-  try {
-    ensureSessionDir();
-    const raw = readFileSync(getSessionPath(sessionId), "utf-8");
-    return JSON.parse(raw) as SessionRecord;
-  } catch {
-    return null;
-  }
-}
-
-export function createSession(demographics: Demographics) {
-  return createSessionForStudent(demographics);
+function createId() {
+  return globalThis.crypto.randomUUID();
 }
 
 export function createSessionForStudent(
   demographics: Demographics,
   studentId?: string,
-) {
-  const id = randomUUID();
-  const record: SessionRecord = {
-    id,
+): SessionRecord {
+  const session: SessionRecord = {
+    id: createId(),
     startedAt: new Date().toISOString(),
-    studentId,
     demographics,
+    studentId,
     events: [],
   };
 
-  writeSession(record);
-  return record;
+  sessionsById.set(session.id, session);
+  return session;
 }
 
-export function getSession(sessionId: string) {
-  return readSession(sessionId) ?? undefined;
+export function getSession(id: string): SessionRecord | undefined {
+  return sessionsById.get(id);
 }
 
 export function addSessionEvent(
-  sessionId: string,
-  event: Omit<SessionEvent, "createdAt">,
-) {
-  const session = readSession(sessionId);
+  id: string,
+  event: SessionEventInput,
+): SessionRecord | undefined {
+  const session = sessionsById.get(id);
   if (!session) {
-    return null;
+    return undefined;
   }
 
   session.events.push({
@@ -90,34 +51,35 @@ export function addSessionEvent(
     createdAt: new Date().toISOString(),
   });
 
-  writeSession(session);
   return session;
 }
 
-export function completeSession(sessionId: string, result: SessionResult) {
-  const session = readSession(sessionId);
+export function completeSession(
+  id: string,
+  result: SessionResult,
+): SessionRecord | undefined {
+  const session = sessionsById.get(id);
   if (!session) {
-    return null;
+    return undefined;
   }
 
   session.completedAt = new Date().toISOString();
   session.result = result;
-  writeSession(session);
-
   return session;
 }
 
-export function listSessions() {
-  try {
-    ensureSessionDir();
-    const fileNames = readdirSync(SESSION_DIR).filter((name) =>
-      name.toLowerCase().endsWith(".json"),
-    );
-
-    return fileNames
-      .map((name) => readSession(path.basename(name, ".json")))
-      .filter((session): session is SessionRecord => Boolean(session));
-  } catch {
-    return [];
-  }
+export function listAttemptSummariesForStudent(
+  studentId: string,
+): StudentAttemptSummary[] {
+  return Array.from(sessionsById.values())
+    .filter((session) => session.studentId === studentId)
+    .map((session) => ({
+      sessionId: session.id,
+      startedAt: session.startedAt,
+      completedAt: session.completedAt,
+      probability: session.result?.probability,
+      riskLevel: session.result?.riskLevel,
+      riskDetected: session.result?.riskDetected,
+    }))
+    .sort((left, right) => right.startedAt.localeCompare(left.startedAt));
 }
