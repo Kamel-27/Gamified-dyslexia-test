@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getQuestionsByNumbers } from "@/lib/questions";
 import { Question } from "@/lib/types";
@@ -9,8 +9,13 @@ import { speakTextAndWait } from "@/lib/voice";
 const QUESTION_DURATION_SECONDS = 15;
 const LETTER_POOL = "abcdefghijklmnopqrstuvwxyz";
 const TARGET_REPEAT_COUNT = 3;
+const MAX_GRID_SIZE = 4;
 const SHOW_SKIP_BUTTON = true;
 const Q30_VISUAL_EXPOSURE_MS = 3000;
+const BACKGROUND_MUSIC_SRC = "/sounds/Busy_Button_Waltz.mp3";
+const BACKGROUND_MUSIC_VOLUME = 0.04;
+const CLICK_SOUND_SRC = "/sounds/click.wav";
+const CLICK_SOUND_VOLUME = 0.16;
 const TYPE_KEYBOARD_ROWS = [
   ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
   ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
@@ -48,6 +53,10 @@ function shuffleArray<T>(values: T[]) {
     [items[i], items[j]] = [items[j], items[i]];
   }
   return items;
+}
+
+function getEffectiveGridSize(gridSize: number) {
+  return Math.max(2, Math.min(gridSize, MAX_GRID_SIZE));
 }
 
 function buildLetterChoices(
@@ -173,7 +182,7 @@ function buildAnswerOptions(question: Question, prompt: ActivePrompt) {
 
   if (interactionType === "grid") {
     return generateGrid(
-      question.gridSize,
+      getEffectiveGridSize(question.gridSize),
       prompt.targetToken,
       prompt.distractorTokens,
       question.targetRepeatCount,
@@ -323,35 +332,50 @@ function generateGrid(
 }
 
 function getCellSide(gridSize: number) {
-  if (gridSize >= 6) {
-    return "min(12.6vw, 9.2vh)";
+  if (gridSize >= 4) {
+    return "min(20vw, 13vh)";
   }
-  if (gridSize === 5) {
-    return "min(13.8vw, 10.2vh)";
+
+  if (gridSize === 3) {
+    return "min(23vw, 14vh)";
   }
-  if (gridSize === 4) {
-    return "min(16.5vw, 11.8vh)";
-  }
-  return "min(19.5vw, 14vh)";
+
+  return "min(25vw, 16vh)";
 }
 
 function getTokenFontSize(tokenLength: number) {
   if (tokenLength >= 8) {
-    return "clamp(0.9rem, 1.5vw, 1.2rem)";
+    return "clamp(0.95rem, 1.55vw, 1.22rem)";
   }
   if (tokenLength >= 7) {
-    return "clamp(0.98rem, 1.65vw, 1.28rem)";
+    return "clamp(1rem, 1.68vw, 1.32rem)";
   }
   if (tokenLength >= 6) {
-    return "clamp(1.06rem, 1.8vw, 1.38rem)";
+    return "clamp(1.08rem, 1.82vw, 1.42rem)";
   }
   if (tokenLength >= 5) {
-    return "clamp(1.14rem, 1.95vw, 1.48rem)";
+    return "clamp(1.22rem, 2vw, 1.56rem)";
   }
   if (tokenLength >= 4) {
-    return "clamp(1.22rem, 2.1vw, 1.62rem)";
+    return "clamp(1.34rem, 2.2vw, 1.72rem)";
   }
-  return "clamp(1.34rem, 2.4vw, 1.82rem)";
+  return "clamp(1.65rem, 3.35vw, 2.45rem)";
+}
+
+function getSyllableTileSize(tokenLength: number) {
+  if (tokenLength >= 4) {
+    return {
+      width: "min(15vw, 9.5vh)",
+      height: "min(15vw, 9.5vh)",
+      fontSize: "clamp(1rem, 1.8vw, 1.35rem)",
+    };
+  }
+
+  return {
+    width: "min(13vw, 8.5vh)",
+    height: "min(13vw, 8.5vh)",
+    fontSize: "clamp(1.1rem, 2vw, 1.45rem)",
+  };
 }
 
 function getTimeProgress(timeLeft: number) {
@@ -402,6 +426,9 @@ export default function TestPage() {
     "idle" | "cue" | "input"
   >("idle");
   const [showVisualSequence, setShowVisualSequence] = useState(false);
+  const [isBackgroundMusicMuted, setIsBackgroundMusicMuted] = useState(false);
+  const backgroundMusicRef = useRef<HTMLAudioElement | null>(null);
+  const clickSoundRef = useRef<HTMLAudioElement | null>(null);
 
   const question = useMemo(
     () => activeQuestions[index],
@@ -415,6 +442,95 @@ export default function TestPage() {
   const mustRetakeQuestion = stats.clicks === 0;
   const interactionType = question?.interactionType ?? "grid";
   const isTypedRecallMode = interactionType === "typedSequenceRecall";
+
+  const pauseBackgroundMusic = useCallback(() => {
+    const audio = backgroundMusicRef.current;
+    if (!audio || audio.paused) {
+      return;
+    }
+
+    audio.pause();
+  }, []);
+
+  const playBackgroundMusic = useCallback(() => {
+    const audio = backgroundMusicRef.current;
+    if (!audio || isBackgroundMusicMuted) {
+      return;
+    }
+
+    audio.volume = BACKGROUND_MUSIC_VOLUME;
+    void audio.play().catch(() => {
+      // Browser autoplay policies may block until a user gesture.
+    });
+  }, [isBackgroundMusicMuted]);
+
+  const toggleBackgroundMusicMute = useCallback(() => {
+    setIsBackgroundMusicMuted((previous) => {
+      const nextMuted = !previous;
+      const audio = backgroundMusicRef.current;
+      if (audio) {
+        audio.muted = nextMuted;
+        if (!nextMuted) {
+          void audio.play().catch(() => {
+            // Browser autoplay policies may block until a user gesture.
+          });
+        }
+      }
+      return nextMuted;
+    });
+  }, []);
+
+  const playClickSound = useCallback(() => {
+    const audio = clickSoundRef.current;
+    if (!audio) {
+      return;
+    }
+
+    audio.pause();
+    audio.currentTime = 0;
+    void audio.play().catch(() => {
+      // Autoplay can be blocked until user gesture.
+    });
+  }, []);
+
+  useEffect(() => {
+    const audio = new Audio(BACKGROUND_MUSIC_SRC);
+    audio.loop = true;
+    audio.preload = "auto";
+    audio.volume = BACKGROUND_MUSIC_VOLUME;
+    audio.muted = isBackgroundMusicMuted;
+
+    backgroundMusicRef.current = audio;
+    playBackgroundMusic();
+
+    return () => {
+      audio.pause();
+      audio.currentTime = 0;
+      backgroundMusicRef.current = null;
+    };
+  }, [isBackgroundMusicMuted, playBackgroundMusic]);
+
+  useEffect(() => {
+    const audio = new Audio(CLICK_SOUND_SRC);
+    audio.preload = "auto";
+    audio.volume = CLICK_SOUND_VOLUME;
+
+    clickSoundRef.current = audio;
+
+    return () => {
+      audio.pause();
+      clickSoundRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isVoicePlaying) {
+      pauseBackgroundMusic();
+      return;
+    }
+
+    playBackgroundMusic();
+  }, [isVoicePlaying, pauseBackgroundMusic, playBackgroundMusic]);
 
   useEffect(() => {
     let active = true;
@@ -750,6 +866,9 @@ export default function TestPage() {
       return;
     }
 
+    playBackgroundMusic();
+    playClickSound();
+
     const currentTarget = activePrompt?.targetToken ?? question.targetToken;
     const interactionType = question.interactionType ?? "grid";
 
@@ -1078,6 +1197,8 @@ export default function TestPage() {
       return;
     }
 
+    playBackgroundMusic();
+
     if (mustRetakeQuestion) {
       restartCurrentQuestion();
       return;
@@ -1109,6 +1230,8 @@ export default function TestPage() {
     if (!question) {
       return;
     }
+
+    playBackgroundMusic();
 
     setError(null);
 
@@ -1151,28 +1274,37 @@ export default function TestPage() {
 
   if (phase === "voice") {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-6 py-10">
-        <div className="w-full rounded-3xl border border-sky-100 bg-white/95 p-10 text-center shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            {question.title} ({index + 1}/{total})
-          </p>
-          <h1 className="mt-4 text-3xl font-semibold text-slate-800">Listen</h1>
-          <p className="mt-3 text-slate-500">
-            The task will appear after the voice instruction.
-          </p>
-          {isVoicePlaying ? (
-            <p className="mt-5 text-sm text-slate-400">Audio is playing...</p>
-          ) : null}
+      <main className="relative h-dvh w-full overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/Gemini_background.png')" }}
+        />
+        <div aria-hidden className="absolute inset-0 bg-black/12" />
 
-          {SHOW_SKIP_BUTTON ? (
-            <button
-              type="button"
-              onClick={handleSkip}
-              className="mt-8 inline-flex rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-            >
-              Skip (testing)
-            </button>
-          ) : null}
+        <div className="relative z-10 mx-auto flex h-full w-full max-w-3xl items-center justify-center px-6 py-10">
+          <div className="w-full rounded-3xl border border-sky-100 bg-white/95 p-10 text-center shadow-sm">
+            <p className="text-sm font-medium text-slate-500">
+              {question.title} ({index + 1}/{total})
+            </p>
+            <h1 className="mt-4 text-3xl font-semibold text-slate-800">Listen</h1>
+            <p className="mt-3 text-slate-500">
+              The task will appear after the voice instruction.
+            </p>
+            {isVoicePlaying ? (
+              <p className="mt-5 text-sm text-slate-400">Audio is playing...</p>
+            ) : null}
+
+            {SHOW_SKIP_BUTTON ? (
+              <button
+                type="button"
+                onClick={handleSkip}
+                className="mt-8 inline-flex rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Skip (testing)
+              </button>
+            ) : null}
+          </div>
         </div>
       </main>
     );
@@ -1180,52 +1312,60 @@ export default function TestPage() {
 
   if (phase === "summary" || phase === "finishing") {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-6 py-10">
-        <div className="w-full max-w-md rounded-2xl border border-sky-200 bg-white p-8 text-center shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            {question.title} complete
-          </p>
-          <h1 className="mt-4 text-3xl font-semibold text-slate-800">
-            You got {score} points
-          </h1>
-          <p className="mt-2 text-slate-500">Progress: {progressPercent}%</p>
+      <main className="relative h-dvh w-full overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/Gemini_background.png')" }}
+        />
+        <div aria-hidden className="absolute inset-0 bg-black/18" />
 
-          {mustRetakeQuestion ? (
-            <p className="mt-3 text-sm font-medium text-amber-700">
-              No clicks were detected. Please retake this question.
+        <div className="relative z-10 mx-auto flex h-full w-full max-w-3xl items-center justify-center px-6 py-10">
+          <div className="w-full max-w-md rounded-2xl border border-sky-200 bg-white p-8 text-center shadow-sm">
+            <p className="text-sm font-medium text-slate-500">
+              {question.title} complete
             </p>
-          ) : null}
+            <h1 className="mt-4 text-3xl font-semibold text-slate-800">
+              You got {score} points
+            </h1>
+            <p className="mt-2 text-slate-500">Progress: {progressPercent}%</p>
 
-          <div className="mx-auto mt-6 flex h-24 w-24 items-center justify-center rounded-full border-8 border-sky-200 text-lg font-semibold text-sky-700">
-            {progressPercent}%
+            {mustRetakeQuestion ? (
+              <p className="mt-3 text-sm font-medium text-amber-700">
+                No clicks were detected. Please retake this question.
+              </p>
+            ) : null}
+
+            <div className="mx-auto mt-6 flex h-24 w-24 items-center justify-center rounded-full border-8 border-sky-200 text-lg font-semibold text-sky-700">
+              {progressPercent}%
+            </div>
+
+            {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
+
+            <button
+              type="button"
+              disabled={phase === "finishing"}
+              onClick={handleContinue}
+              className="mt-8 inline-flex w-full items-center justify-center rounded-lg border border-sky-300 bg-white px-4 py-3 font-semibold text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {phase === "finishing"
+                ? "Finishing..."
+                : mustRetakeQuestion
+                  ? "Retake Question"
+                  : isLastQuestion
+                    ? "View Final Result"
+                    : "Continue"}
+            </button>
           </div>
-
-          {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
-
-          <button
-            type="button"
-            disabled={phase === "finishing"}
-            onClick={handleContinue}
-            className="mt-8 inline-flex w-full items-center justify-center rounded-lg border border-sky-300 bg-white px-4 py-3 font-semibold text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {phase === "finishing"
-              ? "Finishing..."
-              : mustRetakeQuestion
-                ? "Retake Question"
-                : isLastQuestion
-                  ? "View Final Result"
-                  : "Continue"}
-          </button>
         </div>
       </main>
     );
   }
 
-  const cellSide = getCellSide(question.gridSize);
+  const effectiveGridSize = getEffectiveGridSize(question.gridSize);
+  const cellSide = getCellSide(effectiveGridSize);
   const timeProgress = getTimeProgress(timeLeft);
-  const activeTokenLength =
-    activePrompt?.targetToken.length ?? question.targetToken.length;
-  const tokenFontSize = getTokenFontSize(activeTokenLength);
+  const isClassicGridMode = interactionType === "grid";
   const isWordCorrectionChoiceMode =
     interactionType === "wordToLetterChoices" &&
     pendingCorrectionChoices.length > 0;
@@ -1271,14 +1411,28 @@ export default function TestPage() {
 
   return (
     <main className="relative h-dvh w-full overflow-hidden">
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: "url('/Gemini_background.png')" }}
+      />
+      <div aria-hidden className="absolute inset-0 bg-black/12" />
+
       {SHOW_SKIP_BUTTON ? (
-        <div className="absolute left-4 top-4 z-20 sm:left-7 sm:top-6">
+        <div className="absolute left-4 top-4 z-20 flex items-center gap-2 sm:left-7 sm:top-6">
           <button
             type="button"
             onClick={handleSkip}
             className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
           >
             Skip
+          </button>
+          <button
+            type="button"
+            onClick={toggleBackgroundMusicMute}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+          >
+            {isBackgroundMusicMuted ? "Unmute Music" : "Mute Music"}
           </button>
         </div>
       ) : null}
@@ -1294,7 +1448,7 @@ export default function TestPage() {
         </div>
       </div>
 
-      <div className="flex h-full w-full items-center justify-center px-3 py-3 sm:px-6 sm:py-6">
+      <div className="relative z-10 flex h-full w-full items-center justify-center px-3 py-3 sm:px-6 sm:py-6">
         <div className="flex flex-col items-center gap-7 sm:gap-9">
           {showCueBox && (activePrompt?.visualCue || question.visualCue) ? (
             <div
@@ -1398,9 +1552,7 @@ export default function TestPage() {
                       onClick={() => handleAnswerClick(cell, cellIndex)}
                       className="rounded-sm border border-sky-200 bg-white px-1 font-semibold leading-tight text-slate-800 transition hover:bg-sky-50"
                       style={{
-                        width: "min(11.5vw, 8vh)",
-                        height: "min(11.5vw, 8vh)",
-                        fontSize: "clamp(1.2rem, 2.2vw, 1.6rem)",
+                        ...getSyllableTileSize(cell.length),
                       }}
                     >
                       {cell}
@@ -1437,18 +1589,7 @@ export default function TestPage() {
                           : "border-sky-200 bg-white text-slate-800 hover:bg-sky-50"
                       }`}
                       style={{
-                        width:
-                          cell.length > 3
-                            ? "min(14vw, 10vh)"
-                            : "min(11.5vw, 8vh)",
-                        height:
-                          cell.length > 3
-                            ? "min(14vw, 10vh)"
-                            : "min(11.5vw, 8vh)",
-                        fontSize:
-                          cell.length > 3
-                            ? "clamp(1rem, 1.9vw, 1.35rem)"
-                            : "clamp(1.2rem, 2.2vw, 1.6rem)",
+                        ...getSyllableTileSize(cell.length),
                       }}
                     >
                       {cell}
@@ -1472,7 +1613,11 @@ export default function TestPage() {
             </div>
           ) : (
             <div
-              className="grid gap-1.5 sm:gap-2"
+              className={
+                isClassicGridMode
+                  ? "grid gap-2.5 sm:gap-3"
+                  : "grid gap-1.5 sm:gap-2"
+              }
               style={{
                 gridTemplateColumns:
                   interactionType === "letterChoices"
@@ -1484,7 +1629,7 @@ export default function TestPage() {
                         : interactionType === "wordLetters" ||
                             interactionType === "wordToLetterChoices"
                           ? `repeat(${Math.max(gridCells.length, 1)}, minmax(0, 1fr))`
-                          : `repeat(${question.gridSize}, minmax(0, 1fr))`,
+                          : `repeat(${effectiveGridSize}, minmax(0, 1fr))`,
               }}
             >
               {gridCells.map((cell, cellIndex) => (
@@ -1492,13 +1637,17 @@ export default function TestPage() {
                   key={`${index}-${cellIndex}-${cell}`}
                   type="button"
                   onClick={() => handleAnswerClick(cell, cellIndex)}
-                  className="rounded-sm border border-sky-200 bg-white px-1 text-center font-semibold leading-tight text-slate-800 transition hover:bg-sky-50"
+                  className={
+                    isClassicGridMode
+                      ? "rounded-2xl border-[3px] border-[#73a8d9] bg-linear-to-b from-[#eaf5ff] to-[#cfe7ff] px-1 text-center font-semibold leading-none text-[#0a5f87] shadow-[inset_0_2px_0_rgba(255,255,255,0.9),0_4px_0_rgba(110,155,196,0.72),0_10px_18px_rgba(0,0,0,0.24)] transition active:scale-95"
+                      : "rounded-sm border border-sky-200 bg-white px-1 text-center font-semibold leading-tight text-slate-800 transition hover:bg-sky-50"
+                  }
                   style={{
                     width:
                       interactionType === "letterChoices" ||
                       interactionType === "wordLetters" ||
                       interactionType === "wordToLetterChoices"
-                        ? "min(11.5vw, 8vh)"
+                          ? "min(11vw, 7.8vh)"
                         : isSentenceSegmentationMode
                           ? "min(88vw, 56rem)"
                           : cell.length > 3
@@ -1508,7 +1657,7 @@ export default function TestPage() {
                       interactionType === "letterChoices" ||
                       interactionType === "wordLetters" ||
                       interactionType === "wordToLetterChoices"
-                        ? "min(11.5vw, 8vh)"
+                          ? "min(11vw, 7.8vh)"
                         : isSentenceSegmentationMode
                           ? "auto"
                           : cell.length > 3
@@ -1517,12 +1666,12 @@ export default function TestPage() {
                     fontSize:
                       interactionType === "wordLetters" ||
                       interactionType === "wordToLetterChoices"
-                        ? "clamp(1.2rem, 2.2vw, 1.6rem)"
+                          ? "clamp(1.1rem, 2vw, 1.45rem)"
                         : isSentenceSegmentationMode
                           ? "clamp(1.05rem, 1.9vw, 1.45rem)"
                           : cell.length > 3
                             ? "clamp(0.95rem, 1.8vw, 1.28rem)"
-                            : tokenFontSize,
+                            : getTokenFontSize(cell.length),
                     padding: isSentenceSegmentationMode
                       ? "0.8rem 1rem"
                       : cell.length > 3
@@ -1544,7 +1693,7 @@ export default function TestPage() {
         </div>
       </div>
 
-      <div className="pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center px-4">
+      <div className="pointer-events-none absolute bottom-3 left-0 right-0 z-20 flex justify-center px-4">
         <div style={{ minHeight: "1.25rem" }}>
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
         </div>

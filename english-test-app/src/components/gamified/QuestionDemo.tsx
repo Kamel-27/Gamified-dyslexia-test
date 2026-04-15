@@ -9,6 +9,7 @@ import { useSound } from "@/hooks/useSound";
 const DEMO_QUESTIONS = QUESTION_BANK.slice(0, 3);
 const QUESTION_DURATION_SECONDS = 15;
 const TARGET_REPEAT_COUNT = 3;
+const MAX_GRID_SIZE = 4;
 const LETTER_POOL = "abcdefghijklmnopqrstuvwxyz";
 
 type RoundStats = {
@@ -50,7 +51,8 @@ function normalizeDistractorPool(
 }
 
 function generateGrid(question: QuestionType) {
-  const cellsCount = question.gridSize * question.gridSize;
+  const effectiveGridSize = Math.max(2, Math.min(question.gridSize, MAX_GRID_SIZE));
+  const cellsCount = effectiveGridSize * effectiveGridSize;
   const targetToken = question.targetToken.toLowerCase();
   const distractorPool = normalizeDistractorPool(
     targetToken,
@@ -78,11 +80,13 @@ function generateGrid(question: QuestionType) {
 }
 
 function getGridWidth(gridSize: number) {
-  if (gridSize <= 3) {
+  const effectiveGridSize = Math.max(2, Math.min(gridSize, MAX_GRID_SIZE));
+
+  if (effectiveGridSize <= 3) {
     return "min(76vw, 380px)";
   }
 
-  if (gridSize === 4) {
+  if (effectiveGridSize === 4) {
     return "min(82vw, 460px)";
   }
 
@@ -91,30 +95,32 @@ function getGridWidth(gridSize: number) {
 
 function getTokenFontSize(tokenLength: number) {
   if (tokenLength >= 8) {
-    return "clamp(0.95rem, 1.6vw, 1.25rem)";
+    return "clamp(0.84rem, 1.35vw, 1.1rem)";
   }
 
   if (tokenLength >= 6) {
-    return "clamp(1.02rem, 1.9vw, 1.34rem)";
+    return "clamp(0.96rem, 1.66vw, 1.26rem)";
   }
 
   if (tokenLength >= 4) {
-    return "clamp(1.18rem, 2.2vw, 1.52rem)";
+    return "clamp(1.06rem, 1.84vw, 1.42rem)";
   }
 
-  return "clamp(1.52rem, 3vw, 2.2rem)";
+  return "clamp(1.12rem, 2vw, 1.56rem)";
 }
 
 function getCellSide(gridSize: number) {
-  if (gridSize >= 5) {
-    return "min(15.2vw, 6.6rem)";
+  const effectiveGridSize = Math.max(2, Math.min(gridSize, MAX_GRID_SIZE));
+
+  if (effectiveGridSize >= 4) {
+    return "min(18vw, 11.5vh)";
   }
 
-  if (gridSize === 4) {
-    return "min(17.6vw, 7.8rem)";
+  if (effectiveGridSize === 3) {
+    return "min(21vw, 13vh)";
   }
 
-  return "min(22vw, 9rem)";
+  return "min(24vw, 15vh)";
 }
 
 function getTimeProgress(timeLeft: number) {
@@ -286,6 +292,9 @@ export function Question() {
   const cellSide = currentQuestion
     ? getCellSide(currentQuestion.gridSize)
     : "min(15vw, 7rem)";
+  const effectiveGridSize = currentQuestion
+    ? Math.max(2, Math.min(currentQuestion.gridSize, MAX_GRID_SIZE))
+    : 3;
 
   if (!currentQuestion) {
     return (
@@ -322,7 +331,7 @@ export function Question() {
           className="grid gap-4 sm:gap-5"
           style={{
             width: getGridWidth(currentQuestion.gridSize),
-            gridTemplateColumns: `repeat(${currentQuestion.gridSize}, minmax(0, 1fr))`,
+            gridTemplateColumns: `repeat(${effectiveGridSize}, minmax(0, 1fr))`,
           }}
         >
           {gridCells.map((cellToken, cellIndex) => (
