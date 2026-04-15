@@ -18,3 +18,161 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), "Segoe UI", sans-serif;
 }
+
+@keyframes gamifiedGradientShift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0, -2%, 0) scale(1.03);
+    filter: hue-rotate(8deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: hue-rotate(0deg);
+  }
+}
+
+@keyframes gamifiedOrbFloatA {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(8%, 5%, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes gamifiedOrbFloatB {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-10%, 6%, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes gamifiedOrbFloatC {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(6%, -8%, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes answerCorrectFlash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.3);
+    transform: scale(1);
+  }
+  55% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0.12);
+    transform: scale(1.03);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    transform: scale(1);
+  }
+}
+
+@keyframes answerWrongShake {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes answerWrongFlash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.3);
+  }
+  60% {
+    box-shadow: 0 0 0 10px rgba(244, 63, 94, 0.1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0);
+  }
+}
+
+@keyframes floatingXpRise {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-28px) scale(1.06);
+  }
+}
+
+.gamified-gradient-base {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(14, 165, 233, 0.35), transparent 42%),
+    radial-gradient(circle at 82% 18%, rgba(45, 212, 191, 0.32), transparent 45%),
+    radial-gradient(circle at 52% 85%, rgba(56, 189, 248, 0.26), transparent 48%),
+    linear-gradient(145deg, #f4fbff 0%, #e8f7ff 40%, #ecfffb 100%);
+  animation: gamifiedGradientShift 22s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+.gamified-orb {
+  filter: blur(40px);
+  opacity: 0.45;
+  will-change: transform;
+}
+
+.gamified-orb-one {
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.9), rgba(56, 189, 248, 0));
+  animation: gamifiedOrbFloatA 20s ease-in-out infinite;
+}
+
+.gamified-orb-two {
+  background: radial-gradient(circle, rgba(45, 212, 191, 0.8), rgba(45, 212, 191, 0));
+  animation: gamifiedOrbFloatB 24s ease-in-out infinite;
+}
+
+.gamified-orb-three {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.55), rgba(59, 130, 246, 0));
+  animation: gamifiedOrbFloatC 18s ease-in-out infinite;
+}
+
+.answer-feedback-correct {
+  animation: answerCorrectFlash 260ms ease-out;
+}
+
+.answer-feedback-wrong {
+  animation:
+    answerWrongFlash 220ms ease-out,
+    answerWrongShake 220ms ease-out;
+}
+
+.xp-float {
+  animation: floatingXpRise 900ms ease-out forwards;
+}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import * as memorySessionStore from "@/lib/session-store";
 import * as dbSessionStore from "@/lib/db-session-store";
 import { predictRiskFromFastApi } from "@/lib/fastapi-client";
+import { getQuestionIdsForAge } from "@/lib/question-config";
 import {
   buildModelFeaturePayload,
   buildQuestionMetrics,
@@ -22,7 +23,8 @@ export async function POST(
     return NextResponse.json({ error: "Session not found." }, { status: 404 });
   }
 
-  const metrics = buildQuestionMetrics(session.events);
+  const questionIds = getQuestionIdsForAge(session.demographics.age);
+  const metrics = buildQuestionMetrics(session.events, questionIds);
   const totalClicks = metrics.reduce(
     (total, metric) => total + metric.clicks,
     0,

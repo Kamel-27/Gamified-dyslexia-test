@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { QUESTION_BANK } from "@/lib/questions";
+import { getQuestionsByNumbers } from "@/lib/questions";
 import { Question } from "@/lib/types";
 import { speakTextAndWait } from "@/lib/voice";
 
@@ -30,6 +30,11 @@ type ActivePrompt = {
   visualCue?: string;
   correctionTargetToken?: string;
   correctionDistractorTokens?: string[];
+};
+
+type SessionQuestionSetResponse = {
+  sessionId: string;
+  questionIds: number[];
 };
 
 function normalizeToken(token: string) {
@@ -361,6 +366,9 @@ export default function TestPage() {
   const params = useParams<{ sessionId: string }>();
   const sessionId = params.sessionId;
 
+  const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
+  const [questionSetLoading, setQuestionSetLoading] = useState(true);
+
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<
     "voice" | "active" | "summary" | "finishing"
@@ -395,14 +403,72 @@ export default function TestPage() {
   >("idle");
   const [showVisualSequence, setShowVisualSequence] = useState(false);
 
-  const question = useMemo(() => QUESTION_BANK[index], [index]);
-  const total = QUESTION_BANK.length;
+  const question = useMemo(() => activeQuestions[index], [activeQuestions, index]);
+  const total = activeQuestions.length;
   const score = stats.hits;
-  const progressPercent = Math.round(((index + 1) / total) * 100);
-  const isLastQuestion = index + 1 === total;
+  const progressPercent =
+    total > 0 ? Math.round(((index + 1) / total) * 100) : 0;
+  const isLastQuestion = total > 0 && index + 1 === total;
   const mustRetakeQuestion = stats.clicks === 0;
   const interactionType = question?.interactionType ?? "grid";
   const isTypedRecallMode = interactionType === "typedSequenceRecall";
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadQuestionSet() {
+      setQuestionSetLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/session/${sessionId}`, {
+          cache: "no-store",
+        });
+
+        const payload = (await response.json()) as
+          | SessionQuestionSetResponse
+          | { error?: string };
+
+        if (!response.ok || !("questionIds" in payload)) {
+          throw new Error(
+            ("error" in payload && payload.error) ||
+              "Unable to load session question set.",
+          );
+        }
+
+        const questions = getQuestionsByNumbers(payload.questionIds);
+        if (questions.length === 0) {
+          throw new Error("No questions are configured for this session.");
+        }
+
+        if (!active) {
+          return;
+        }
+
+        setActiveQuestions(questions);
+        setIndex(0);
+        setPhase("voice");
+      } catch (loadError) {
+        if (!active) {
+          return;
+        }
+
+        setError(
+          loadError instanceof Error ? loadError.message : "Unexpected error.",
+        );
+      } finally {
+        if (active) {
+          setQuestionSetLoading(false);
+        }
+      }
+    }
+
+    void loadQuestionSet();
+
+    return () => {
+      active = false;
+    };
+  }, [sessionId]);
 
   async function postEvent(
     eventType: "click" | "hit" | "miss",
@@ -1063,10 +1129,19 @@ export default function TestPage() {
     setIndex((previous) => previous + 1);
   }
 
+  if (questionSetLoading) {
+    return (
+      <main className="mx-auto max-w-4xl px-6 py-16">
+        <p className="text-slate-700">Loading age-specific question set...</p>
+      </main>
+    );
+  }
+
   if (!question) {
     return (
       <main className="mx-auto max-w-4xl px-6 py-16">
-        <p className="text-red-700">No question found.</p>
+        <p className="text-red-700">No question found for this session.</p>
+        {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
       </main>
     );
   }

@@ -1,4 +1,3 @@
-import { QUESTION_BANK } from "@/lib/questions";
 import {
   Demographics,
   QuestionMetrics,
@@ -8,9 +7,11 @@ import {
 
 export function buildQuestionMetrics(
   events: SessionEvent[],
+  questionIds: number[],
 ): QuestionMetrics[] {
-  return QUESTION_BANK.map((question) => {
-    const qEvents = events.filter((event) => event.questionId === question.id);
+  return questionIds.map((questionId) => {
+    const questionKey = `q${questionId}`;
+    const qEvents = events.filter((event) => event.questionId === questionKey);
     const clicks = qEvents.filter(
       (event) => event.eventType === "click",
     ).length;
@@ -21,7 +22,7 @@ export function buildQuestionMetrics(
     const missrate = clicks > 0 ? misses / clicks : 0;
 
     return {
-      questionId: question.id,
+      questionId: questionKey,
       clicks,
       hits,
       misses,
@@ -63,14 +64,18 @@ export function buildModelFeaturePayload(
     Age: demographics.age,
   };
 
-  metrics.forEach((metric, index) => {
-    const position = index + 1;
-    payload[`Clicks${position}`] = metric.clicks;
-    payload[`Hits${position}`] = metric.hits;
-    payload[`Misses${position}`] = metric.misses;
-    payload[`Score${position}`] = metric.score;
-    payload[`Accuracy${position}`] = metric.accuracy;
-    payload[`Missrate${position}`] = metric.missrate;
+  metrics.forEach((metric) => {
+    const questionNumber = Number(metric.questionId.replace(/^q/i, ""));
+    if (!Number.isInteger(questionNumber) || questionNumber <= 0) {
+      return;
+    }
+
+    payload[`Clicks${questionNumber}`] = metric.clicks;
+    payload[`Hits${questionNumber}`] = metric.hits;
+    payload[`Misses${questionNumber}`] = metric.misses;
+    payload[`Score${questionNumber}`] = metric.score;
+    payload[`Accuracy${questionNumber}`] = metric.accuracy;
+    payload[`Missrate${questionNumber}`] = metric.missrate;
   });
 
   return payload;

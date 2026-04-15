@@ -1018,3 +1018,29 @@ export const QUESTION_BANK: Question[] = [
     ],
   },
 ];
+
+function parseQuestionNumber(questionId: string) {
+  const number = Number(questionId.replace(/^q/i, ""));
+  if (!Number.isInteger(number) || number <= 0) {
+    return null;
+  }
+
+  return number;
+}
+
+const QUESTION_LOOKUP = new Map<number, Question>(
+  QUESTION_BANK.flatMap((question) => {
+    const number = parseQuestionNumber(question.id);
+    if (!number) {
+      return [];
+    }
+
+    return [[number, question] as const];
+  }),
+);
+
+export function getQuestionsByNumbers(questionNumbers: number[]) {
+  return questionNumbers
+    .map((questionNumber) => QUESTION_LOOKUP.get(questionNumber))
+    .filter((question): question is Question => !!question);
+}

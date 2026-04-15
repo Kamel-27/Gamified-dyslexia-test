@@ -3,6 +3,7 @@ import * as memorySessionStore from "@/lib/session-store";
 import * as memoryStudentStore from "@/lib/student-store";
 import * as dbSessionStore from "@/lib/db-session-store";
 import * as dbStudentStore from "@/lib/db-student-store";
+import { getAgeGroupForAge, getQuestionIdsForAge } from "@/lib/question-config";
 import { Demographics } from "@/lib/types";
 
 const useDatabase = process.env.USE_DATABASE === "true";
@@ -37,11 +38,17 @@ export async function POST(request: Request) {
         student.id,
       );
 
+      const ageGroup = getAgeGroupForAge(student.demographics.age);
+      const questionIds = getQuestionIdsForAge(student.demographics.age);
+
       return NextResponse.json({
         sessionId: session.id,
         startedAt: session.startedAt,
         studentId: student.id,
         studentName: student.name,
+        ageGroup,
+        questionIds,
+        totalQuestions: questionIds.length,
       });
     }
 
@@ -67,9 +74,15 @@ export async function POST(request: Request) {
       otherLang: body.otherLang,
     });
 
+    const ageGroup = getAgeGroupForAge(body.age);
+    const questionIds = getQuestionIdsForAge(body.age);
+
     return NextResponse.json({
       sessionId: session.id,
       startedAt: session.startedAt,
+      ageGroup,
+      questionIds,
+      totalQuestions: questionIds.length,
     });
   } catch (error) {
     return NextResponse.json(

@@ -4,6 +4,7 @@ export type FastApiPrediction = {
   threshold: number;
   prediction: string;
   confidence: number;
+  age_group?: string;
   model_version: string;
   timestamp: string;
 };
