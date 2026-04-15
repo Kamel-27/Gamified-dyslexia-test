@@ -403,7 +403,10 @@ export default function TestPage() {
   >("idle");
   const [showVisualSequence, setShowVisualSequence] = useState(false);
 
-  const question = useMemo(() => activeQuestions[index], [activeQuestions, index]);
+  const question = useMemo(
+    () => activeQuestions[index],
+    [activeQuestions, index],
+  );
   const total = activeQuestions.length;
   const score = stats.hits;
   const progressPercent =

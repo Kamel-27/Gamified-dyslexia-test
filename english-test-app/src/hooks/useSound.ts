@@ -90,7 +90,14 @@ export function useSound(options: UseSoundOptions = {}) {
       failAudio.pause();
       audioRef.current = { click: null, success: null, fail: null };
     };
-  }, [sources.click, sources.success, sources.fail, volumes.click, volumes.success, volumes.fail]);
+  }, [
+    sources.click,
+    sources.success,
+    sources.fail,
+    volumes.click,
+    volumes.success,
+    volumes.fail,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
