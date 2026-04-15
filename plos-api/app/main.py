@@ -14,17 +14,29 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def _resolve_model_path() -> str:
-    configured = os.getenv("MODEL_PATH")
-    if configured:
-        return configured
+def _resolve_model_config() -> tuple[str, str]:
+    configured_config = os.getenv("MODEL_CONFIG_PATH")
+    configured_model_dir = os.getenv("MODEL_DIR")
 
-    project_model = Path(__file__).resolve().parents[1] / "model" / "plos-model.joblib"
-    if project_model.exists():
-        return str(project_model)
+    if configured_config:
+        config_path = Path(configured_config).expanduser().resolve()
+    else:
+        project_config = (
+            Path(__file__).resolve().parents[1] / "model" / "question_config.json"
+        )
+        if project_config.exists():
+            config_path = project_config
+        else:
+            config_path = (
+                Path(__file__).resolve().parent / "model" / "question_config.json"
+            )
 
-    bundled_model = Path(__file__).resolve().parent / "model" / "plos-model.joblib"
-    return str(bundled_model)
+    if configured_model_dir:
+        model_dir = Path(configured_model_dir).expanduser().resolve()
+    else:
+        model_dir = config_path.parent
+
+    return str(config_path), str(model_dir)
 
 
 def _resolve_cors_origins() -> list[str]:
@@ -41,9 +53,9 @@ def _resolve_cors_origins() -> list[str]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    model_path = _resolve_model_path()
+    config_path, model_dir = _resolve_model_config()
     try:
-        app.state.predictor = DyslexiaPredictor(model_path)
+        app.state.predictor = DyslexiaPredictor(config_path=config_path, model_dir=model_dir)
         logger.info("FastAPI ready")
     except Exception as exc:
         logger.exception("Unable to initialize predictor: %s", exc)
@@ -54,8 +66,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Dyslexia Prediction API",
-    version="1.0.0",
-    description="Prediction service for the PLOS dyslexia model",
+    version="2.0.0",
+    description=(
+        "Age-grouped dyslexia screening prediction service using grouped "
+        "Lexora models (G1 7-8, G2 9-11, G3 12-17)."
+    ),
     lifespan=lifespan,
 )
 
@@ -75,7 +90,7 @@ app.include_router(predict_router)
 async def root():
     return {
         "service": "dyslexia-predictor",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "health": "/api/v1/health",
         "docs": "/docs",
     }

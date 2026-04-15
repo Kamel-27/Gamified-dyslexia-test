@@ -15,6 +15,7 @@ async def health_check(request: Request):
             model_version="unknown",
             features_count=0,
             threshold=0.0,
+            groups_count=0,
             message="Model is not loaded",
         )
 
@@ -23,6 +24,7 @@ async def health_check(request: Request):
         model_version=predictor.model_version,
         features_count=len(predictor.feature_names),
         threshold=predictor.threshold,
+        groups_count=len(predictor.groups),
         message="Model loaded and ready",
     )
 
@@ -37,6 +39,7 @@ async def schema(request: Request):
             performance_features=[],
             questions=[],
             measures=[],
+            groups={},
         )
 
     demographic = ["Gender", "Nativelang", "Otherlang", "Age"]
@@ -59,4 +62,5 @@ async def schema(request: Request):
         performance_features=performance,
         questions=sorted(questions),
         measures=measures,
+        groups=predictor.get_group_summaries(),
     )

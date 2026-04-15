@@ -20,6 +20,7 @@ class PredictResponse(BaseModel):
     threshold: float = Field(..., ge=0.0, le=1.0)
     prediction: str
     confidence: float = Field(..., ge=0.0, le=1.0)
+    age_group: str
     model_version: str
     timestamp: datetime
 
@@ -29,7 +30,15 @@ class HealthResponse(BaseModel):
     model_version: str
     features_count: int
     threshold: float
+    groups_count: int
     message: str
+
+
+class SchemaGroup(BaseModel):
+    age_range: list[int]
+    threshold: float
+    questions: list[int]
+    features: list[str]
 
 
 class SchemaResponse(BaseModel):
@@ -38,6 +47,7 @@ class SchemaResponse(BaseModel):
     performance_features: list[str]
     questions: list[int]
     measures: list[str]
+    groups: dict[str, SchemaGroup]
 
 
 class ErrorResponse(BaseModel):
