@@ -247,11 +247,15 @@ export function SignupPageView() {
             </Link>
 
             <div className="auth-steps">
-              <div className={`auth-step-dot ${step === 1 ? "active" : "done"}`}>
+              <div
+                className={`auth-step-dot ${step === 1 ? "active" : "done"}`}
+              >
                 {step === 1 ? "1" : "OK"}
               </div>
               <div className={`auth-step-line ${step === 2 ? "done" : ""}`} />
-              <div className={`auth-step-dot ${step === 2 ? "active" : "future"}`}>
+              <div
+                className={`auth-step-dot ${step === 2 ? "active" : "future"}`}
+              >
                 2
               </div>
             </div>
@@ -263,7 +267,13 @@ export function SignupPageView() {
                   Already have one? <Link href="/login">Sign in</Link>
                 </p>
 
-                <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 14 }}>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: "var(--ink-soft)",
+                    marginBottom: 14,
+                  }}
+                >
                   I am joining as a...
                 </p>
 
@@ -295,7 +305,8 @@ export function SignupPageView() {
               <>
                 <h1 className="auth-title">Your details</h1>
                 <p className="auth-subtitle">
-                  You selected: <strong style={{ color: "var(--indigo)" }}>
+                  You selected:{" "}
+                  <strong style={{ color: "var(--indigo)" }}>
                     {roles.find((entry) => entry.id === role)?.label}
                   </strong>{" "}
                   <button
@@ -383,7 +394,9 @@ export function SignupPageView() {
                               className="auth-strength-bar"
                               style={{
                                 background:
-                                  index <= strength ? strengthColor[strength] : undefined,
+                                  index <= strength
+                                    ? strengthColor[strength]
+                                    : undefined,
                               }}
                             />
                           ))}
@@ -428,7 +441,11 @@ export function SignupPageView() {
                     </label>
                   </div>
 
-                  <button type="submit" className="auth-submit" disabled={loading}>
+                  <button
+                    type="submit"
+                    className="auth-submit"
+                    disabled={loading}
+                  >
                     {loading ? "Creating account..." : "Create account"}
                   </button>
 

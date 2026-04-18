@@ -163,7 +163,9 @@ export function LoginPageView() {
             <div className="auth-left-stats">
               <div>
                 <div className="auth-left-stat-num">80%+</div>
-                <div className="auth-left-stat-label">screening sensitivity</div>
+                <div className="auth-left-stat-label">
+                  screening sensitivity
+                </div>
               </div>
               <div>
                 <div className="auth-left-stat-num">15 min</div>
@@ -189,10 +191,15 @@ export function LoginPageView() {
 
             <h1 className="auth-title">Welcome back</h1>
             <p className="auth-subtitle">
-              Do not have an account? <Link href="/signup">Create one free</Link>
+              Do not have an account?{" "}
+              <Link href="/signup">Create one free</Link>
             </p>
 
-            <button className="auth-social-btn" onClick={handleGoogle} disabled={loading}>
+            <button
+              className="auth-social-btn"
+              onClick={handleGoogle}
+              disabled={loading}
+            >
               Continue with Google
             </button>
 

@@ -396,7 +396,7 @@ export default function DashboardPage() {
                           {student.demographics.nativeLang ? "Yes" : "No"}
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
-                          Preferred language: {" "}
+                          Preferred language:{" "}
                           {student.demographics.preferredExamLanguage === "ar"
                             ? "Arabic"
                             : "English"}

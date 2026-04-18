@@ -200,9 +200,9 @@ export function LandingPageView() {
         <div className="lx-container">
           <div className="lx-disclaimer-inner">
             <p className="lx-disclaimer-text">
-              <strong>Important:</strong> Lexora is a <strong>screening tool
-              only</strong>. A positive result indicates risk and warrants
-              professional evaluation.
+              <strong>Important:</strong> Lexora is a{" "}
+              <strong>screening tool only</strong>. A positive result indicates
+              risk and warrants professional evaluation.
             </p>
           </div>
         </div>
@@ -291,7 +291,9 @@ export function LandingPageView() {
                   </li>
                 ))}
               </ul>
-              <span className="lx-sol-tag lx-sol-tag-indigo">Core assessment</span>
+              <span className="lx-sol-tag lx-sol-tag-indigo">
+                Core assessment
+              </span>
             </div>
           </div>
         </div>
@@ -370,7 +372,12 @@ export function LandingPageView() {
               Fifteen minutes today can prevent years of unnecessary struggle.
             </p>
             <div
-              style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}
+              style={{
+                display: "flex",
+                gap: 12,
+                justifyContent: "center",
+                flexWrap: "wrap",
+              }}
             >
               <Link href="/signup" className="lx-btn lx-btn-primary lx-btn-lg">
                 Start free assessment <IconArrow />

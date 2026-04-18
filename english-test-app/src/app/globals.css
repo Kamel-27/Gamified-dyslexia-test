@@ -4,8 +4,9 @@
   --background: #eef6ff;
   --foreground: #0f172a;
   --font-sans: var(--font-geist-sans);
-  --font-geist-mono: "ui-monospace", "SFMono-Regular", Menlo, Monaco,
-    Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-geist-mono:
+    "ui-monospace", "SFMono-Regular", Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
 }
 
 @theme inline {
