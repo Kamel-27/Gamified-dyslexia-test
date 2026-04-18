@@ -4,14 +4,22 @@ import * as memoryStudentStore from "@/lib/student-store";
 import * as dbSessionStore from "@/lib/db-session-store";
 import * as dbStudentStore from "@/lib/db-student-store";
 import { getAgeGroupForAge, getQuestionIdsForAge } from "@/lib/question-config";
+import type { ExamLanguage } from "@/lib/questions";
 import { Demographics } from "@/lib/types";
 
 const useDatabase = process.env.USE_DATABASE === "true";
 
+function resolveExamLanguage(value: unknown): ExamLanguage {
+  return value === "ar" ? "ar" : "en";
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as
-      | (Partial<Demographics> & { studentId?: string })
+      | (Partial<Demographics> & {
+          studentId?: string;
+          examLanguage?: ExamLanguage;
+        })
       | null;
 
     if (!body) {
@@ -22,6 +30,7 @@ export async function POST(request: Request) {
     }
 
     if (typeof body.studentId === "string" && body.studentId.length > 0) {
+      const examLanguage = resolveExamLanguage(body.examLanguage);
       const studentStore = useDatabase ? dbStudentStore : memoryStudentStore;
       const sessionStore = useDatabase ? dbSessionStore : memorySessionStore;
 
@@ -47,10 +56,13 @@ export async function POST(request: Request) {
         studentId: student.id,
         studentName: student.name,
         ageGroup,
+        examLanguage,
         questionIds,
         totalQuestions: questionIds.length,
       });
     }
+
+    const examLanguage = resolveExamLanguage(body.examLanguage);
 
     if (
       typeof body.age !== "number" ||
@@ -81,6 +93,7 @@ export async function POST(request: Request) {
       sessionId: session.id,
       startedAt: session.startedAt,
       ageGroup,
+      examLanguage,
       questionIds,
       totalQuestions: questionIds.length,
     });

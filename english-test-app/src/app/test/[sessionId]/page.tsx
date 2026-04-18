@@ -1,13 +1,48 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { getQuestionsByNumbers } from "@/lib/questions";
+import type { ExamLanguage } from "@/lib/questions";
 import { Question } from "@/lib/types";
-import { speakTextAndWait } from "@/lib/voice";
+import {
+  speakTextAndWait,
+  unlockSpeechSynthesis,
+  type VoiceLocale,
+} from "@/lib/voice";
 
 const QUESTION_DURATION_SECONDS = 15;
-const LETTER_POOL = "abcdefghijklmnopqrstuvwxyz";
+const ENGLISH_LETTER_POOL = "abcdefghijklmnopqrstuvwxyz";
+const ARABIC_LETTER_POOL = [
+  "ا",
+  "ب",
+  "ت",
+  "ث",
+  "ج",
+  "ح",
+  "خ",
+  "د",
+  "ذ",
+  "ر",
+  "ز",
+  "س",
+  "ش",
+  "ص",
+  "ض",
+  "ط",
+  "ظ",
+  "ع",
+  "غ",
+  "ف",
+  "ق",
+  "ك",
+  "ل",
+  "م",
+  "ن",
+  "ه",
+  "و",
+  "ي",
+];
 const TARGET_REPEAT_COUNT = 3;
 const MAX_GRID_SIZE = 4;
 const SHOW_SKIP_BUTTON = true;
@@ -16,12 +51,111 @@ const BACKGROUND_MUSIC_SRC = "/sounds/Busy_Button_Waltz.mp3";
 const BACKGROUND_MUSIC_VOLUME = 0.04;
 const CLICK_SOUND_SRC = "/sounds/click.wav";
 const CLICK_SOUND_VOLUME = 0.16;
-const TYPE_KEYBOARD_ROWS = [
+const ENGLISH_TYPE_KEYBOARD_ROWS = [
   ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
   ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
   ["z", "x", "c", "v", "b", "n", "m"],
 ];
-const TYPE_KEYBOARD_KEYS = TYPE_KEYBOARD_ROWS.flat();
+const ARABIC_TYPE_KEYBOARD_ROWS = [
+  ["ض", "ص", "ث", "ق", "ف", "غ", "ع", "ه", "خ", "ح", "ج", "د"],
+  ["ش", "س", "ي", "ب", "ل", "ا", "ت", "ن", "م", "ك", "ط"],
+  ["ذ", "ئ", "ء", "ؤ", "ر", "ى", "ة", "و", "ز", "ظ"],
+];
+
+const SEQUENTIAL_VARIANT_QUESTION_IDS = new Set(["q14", "q15", "q16", "q17"]);
+
+const ARABIC_LETTER_NAME_BY_SYMBOL: Record<string, string> = {
+  ا: "ألف",
+  ب: "باء",
+  ت: "تاء",
+  ث: "ثاء",
+  ج: "جيم",
+  ح: "حاء",
+  خ: "خاء",
+  د: "دال",
+  ذ: "ذال",
+  ر: "راء",
+  ز: "زاي",
+  س: "سين",
+  ش: "شين",
+  ص: "صاد",
+  ض: "ضاد",
+  ط: "طاء",
+  ظ: "ظاء",
+  ع: "عين",
+  غ: "غين",
+  ف: "فاء",
+  ق: "قاف",
+  ك: "كاف",
+  ل: "لام",
+  م: "ميم",
+  ن: "نون",
+  ه: "هاء",
+  و: "واو",
+  ي: "ياء",
+  ة: "تاء مربوطة",
+  ى: "ألف مقصورة",
+  ء: "همزة",
+  ئ: "ياء همزة",
+  ؤ: "واو همزة",
+};
+
+const EXAM_COPY = {
+  en: {
+    loadQuestionSet: "Loading age-specific question set...",
+    noQuestionFound: "No question found for this session.",
+    listenHeading: "Listen",
+    voiceHint: "The task will appear after the voice instruction.",
+    audioPlaying: "Audio is playing...",
+    unlockVoiceHint: "Tap once to enable voice playback on this browser.",
+    enableVoiceButton: "Enable Voice",
+    enablingVoiceButton: "Enabling Voice...",
+    voiceMayBeUnavailable:
+      "Voice may be unavailable on this device. The test will continue.",
+    skipTesting: "Skip (testing)",
+    completeLabel: "complete",
+    pointsPrefix: "You got",
+    pointsSuffix: "points",
+    progressPrefix: "Progress:",
+    noClicks: "No clicks were detected. Please retake this question.",
+    finishing: "Finishing...",
+    retake: "Retake Question",
+    viewResult: "View Final Result",
+    continue: "Continue",
+    skip: "Skip",
+    muteMusic: "Mute Music",
+    unmuteMusic: "Unmute Music",
+    memorizeAndType: "Memorize and type",
+    typedPrefix: "Typed",
+  },
+  ar: {
+    loadQuestionSet: "جاري تحميل أسئلة الفئة العمرية...",
+    noQuestionFound: "لا توجد أسئلة لهذه الجلسة.",
+    listenHeading: "استمع",
+    voiceHint: "ستظهر المهمة بعد التعليمات الصوتية.",
+    audioPlaying: "الصوت قيد التشغيل...",
+    unlockVoiceHint: "اضغط مرة واحدة لتفعيل تشغيل الصوت في المتصفح.",
+    enableVoiceButton: "تفعيل الصوت",
+    enablingVoiceButton: "جاري تفعيل الصوت...",
+    voiceMayBeUnavailable:
+      "قد لا يكون الصوت متاحا على هذا الجهاز. سيستمر الاختبار.",
+    skipTesting: "تخطي (للاختبار)",
+    completeLabel: "اكتمل",
+    pointsPrefix: "حصلت على",
+    pointsSuffix: "نقطة",
+    progressPrefix: "التقدم:",
+    noClicks: "لم يتم تسجيل أي ضغطات. يرجى إعادة السؤال.",
+    finishing: "جاري الإنهاء...",
+    retake: "إعادة السؤال",
+    viewResult: "عرض النتيجة النهائية",
+    continue: "متابعة",
+    skip: "تخطي",
+    muteMusic: "كتم الموسيقى",
+    unmuteMusic: "تشغيل الموسيقى",
+    memorizeAndType: "احفظ ثم اكتب",
+    typedPrefix: "المكتوب",
+  },
+} as const;
 
 type RoundStats = {
   clicks: number;
@@ -43,7 +177,54 @@ type SessionQuestionSetResponse = {
 };
 
 function normalizeToken(token: string) {
-  return token.toLowerCase().replace(/[^a-z]/g, "");
+  return token
+    .toLocaleLowerCase()
+    .normalize("NFKC")
+    .replace(/\s+/g, "")
+    .replace(/[^\p{L}\p{N}]/gu, "");
+}
+
+function hasArabicScript(token: string) {
+  return /[\u0600-\u06FF]/.test(token);
+}
+
+function toArabicSpeechText(text: string) {
+  if (!text.trim()) {
+    return text;
+  }
+
+  return text
+    .split(/\s+/)
+    .map((token) => {
+      const strippedToken = token.replace(/[^\u0600-\u06FF]/g, "");
+      if (strippedToken.length !== 1) {
+        return token;
+      }
+
+      const letterName = ARABIC_LETTER_NAME_BY_SYMBOL[strippedToken];
+      if (!letterName) {
+        return token;
+      }
+
+      return token.replace(strippedToken, letterName);
+    })
+    .join(" ");
+}
+
+function getSpeechTextByLanguage(text: string, language: ExamLanguage) {
+  if (language !== "ar") {
+    return text;
+  }
+
+  return toArabicSpeechText(text);
+}
+
+function getLetterPool(targetToken: string) {
+  if (hasArabicScript(targetToken)) {
+    return ARABIC_LETTER_POOL;
+  }
+
+  return ENGLISH_LETTER_POOL.split("");
 }
 
 function shuffleArray<T>(values: T[]) {
@@ -70,7 +251,7 @@ function buildLetterChoices(
     .slice(0, Math.max(choiceCount - 1, 0));
 
   if (distractors.length < Math.max(choiceCount - 1, 0)) {
-    const fallback = LETTER_POOL.split("").filter(
+    const fallback = getLetterPool(targetToken).filter(
       (token) => token !== normalizedTarget && !distractors.includes(token),
     );
     distractors.push(
@@ -137,7 +318,11 @@ function buildSentenceSegmentationChoices(
   return shuffleArray(options);
 }
 
-function buildAnswerOptions(question: Question, prompt: ActivePrompt) {
+function buildAnswerOptions(
+  question: Question,
+  prompt: ActivePrompt,
+  typedKeyboardKeys: string[],
+) {
   const interactionType = question.interactionType ?? "grid";
 
   if (interactionType === "letterChoices") {
@@ -177,15 +362,19 @@ function buildAnswerOptions(question: Question, prompt: ActivePrompt) {
   }
 
   if (interactionType === "typedSequenceRecall") {
-    return TYPE_KEYBOARD_KEYS;
+    return typedKeyboardKeys;
   }
 
   if (interactionType === "grid") {
+    const effectiveGridSize = getEffectiveGridSize(question.gridSize);
     return generateGrid(
-      getEffectiveGridSize(question.gridSize),
+      effectiveGridSize,
       prompt.targetToken,
       prompt.distractorTokens,
       question.targetRepeatCount,
+      shouldUseFixedGridTargetCell(question)
+        ? Math.floor((effectiveGridSize * effectiveGridSize) / 2)
+        : undefined,
     );
   }
 
@@ -222,7 +411,7 @@ function buildFiveLetterChoices(
     .filter((token) => token.length === 1 && token !== normalizedCorrect);
 
   if (pool.length < 4) {
-    const fallback = LETTER_POOL.split("").filter(
+    const fallback = getLetterPool(correctLetter).filter(
       (token) => token !== normalizedCorrect && !pool.includes(token),
     );
     pool.push(...fallback.slice(0, 4 - pool.length));
@@ -233,9 +422,14 @@ function buildFiveLetterChoices(
 
 function getVisualCueClassName(visualCue: string) {
   const isSentenceLike = visualCue.includes(" ") || visualCue.length > 16;
+  const isArabicText = hasArabicScript(visualCue);
 
   if (isSentenceLike) {
     return "w-full max-w-5xl rounded-sm border border-sky-200 bg-white px-5 py-4 text-center text-base leading-relaxed tracking-normal text-slate-600 sm:px-8 sm:py-5 sm:text-xl";
+  }
+
+  if (isArabicText) {
+    return "min-w-65 rounded-sm border border-sky-200 bg-white px-8 py-5 text-center text-4xl tracking-normal text-slate-600 sm:min-w-105 sm:text-5xl";
   }
 
   return "min-w-65 rounded-sm border border-sky-200 bg-white px-8 py-5 text-center text-4xl tracking-[0.3em] text-slate-600 sm:min-w-105 sm:text-5xl";
@@ -263,14 +457,28 @@ function resolveActivePrompt(question: Question, previousVisualCue?: string) {
     targetToken: selected.targetToken,
     distractorTokens: selected.distractorTokens,
     visualCue: selected.visualCue,
+    correctionTargetToken: selected.correctionTargetToken,
+    correctionDistractorTokens: selected.correctionDistractorTokens,
   };
+}
+
+function shouldUseSequentialPromptCycle(question: Question) {
+  return SEQUENTIAL_VARIANT_QUESTION_IDS.has(question.id);
+}
+
+function shouldUseFixedGridTargetCell(question: Question) {
+  return SEQUENTIAL_VARIANT_QUESTION_IDS.has(question.id);
 }
 
 function getDefaultDistractorPool(targetToken: string) {
   if (targetToken.length === 1) {
-    return LETTER_POOL.split("").filter(
+    return getLetterPool(targetToken).filter(
       (token) => token !== targetToken.toLowerCase(),
     );
+  }
+
+  if (hasArabicScript(targetToken)) {
+    return ["با", "تا", "دا", "را", "سا", "نا", "ما", "فا", "لا", "كا"];
   }
 
   return [
@@ -307,6 +515,7 @@ function generateGrid(
   targetToken: string,
   distractorTokens?: string[],
   targetRepeatCount?: number,
+  fixedTargetIndex?: number,
 ) {
   const cellsCount = gridSize * gridSize;
   const distractorPool = normalizeDistractorPool(targetToken, distractorTokens);
@@ -319,6 +528,14 @@ function generateGrid(
   const requestedCount = targetRepeatCount ?? TARGET_REPEAT_COUNT;
   const targetCount = Math.min(Math.max(requestedCount, 1), cellsCount);
   const targetIndexes = new Set<number>();
+
+  if (typeof fixedTargetIndex === "number" && targetCount === 1) {
+    const boundedFixedIndex = Math.max(
+      0,
+      Math.min(cellsCount - 1, fixedTargetIndex),
+    );
+    targetIndexes.add(boundedFixedIndex);
+  }
 
   while (targetIndexes.size < targetCount) {
     targetIndexes.add(Math.floor(Math.random() * cellsCount));
@@ -388,7 +605,21 @@ function getTimeProgress(timeLeft: number) {
 export default function TestPage() {
   const router = useRouter();
   const params = useParams<{ sessionId: string }>();
+  const searchParams = useSearchParams();
   const sessionId = params.sessionId;
+  const examLanguage: ExamLanguage =
+    searchParams.get("lang") === "ar" ? "ar" : "en";
+  const copy = EXAM_COPY[examLanguage];
+  const isArabicExam = examLanguage === "ar";
+  const voiceLocale: VoiceLocale = isArabicExam ? "ar-EG" : "en-US";
+  const voiceUnavailableMessage = copy.voiceMayBeUnavailable;
+  const typedKeyboardRows = isArabicExam
+    ? ARABIC_TYPE_KEYBOARD_ROWS
+    : ENGLISH_TYPE_KEYBOARD_ROWS;
+  const typedKeyboardKeys = useMemo(
+    () => typedKeyboardRows.flat(),
+    [typedKeyboardRows],
+  );
 
   const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
   const [questionSetLoading, setQuestionSetLoading] = useState(true);
@@ -421,12 +652,15 @@ export default function TestPage() {
   const [typedPromptSequence, setTypedPromptSequence] = useState<
     ActivePrompt[]
   >([]);
+  const [promptCycleIndex, setPromptCycleIndex] = useState(0);
   const [typedPromptIndex, setTypedPromptIndex] = useState(0);
   const [typedRoundStage, setTypedRoundStage] = useState<
     "idle" | "cue" | "input"
   >("idle");
   const [showVisualSequence, setShowVisualSequence] = useState(false);
   const [isBackgroundMusicMuted, setIsBackgroundMusicMuted] = useState(false);
+  const [isSpeechReady, setIsSpeechReady] = useState(false);
+  const [isEnablingSpeech, setIsEnablingSpeech] = useState(false);
   const backgroundMusicRef = useRef<HTMLAudioElement | null>(null);
   const clickSoundRef = useRef<HTMLAudioElement | null>(null);
 
@@ -493,6 +727,48 @@ export default function TestPage() {
     });
   }, []);
 
+  const handleEnableSpeech = useCallback(async () => {
+    setIsEnablingSpeech(true);
+    setError(null);
+
+    try {
+      let unlocked = await unlockSpeechSynthesis(voiceLocale);
+
+      if (!unlocked && isArabicExam) {
+        const fallbackLocale: VoiceLocale =
+          voiceLocale === "ar-EG" ? "ar-SA" : "ar-EG";
+        unlocked = await unlockSpeechSynthesis(fallbackLocale);
+      }
+
+      if (!unlocked) {
+        setError(voiceUnavailableMessage);
+      }
+
+      setIsSpeechReady(true);
+    } finally {
+      setIsEnablingSpeech(false);
+    }
+  }, [voiceLocale, voiceUnavailableMessage, isArabicExam]);
+
+  const speakWithVoiceFallback = useCallback(
+    async (text: string) => {
+      const speechText = getSpeechTextByLanguage(text, examLanguage);
+      const localesToTry: VoiceLocale[] = isArabicExam
+        ? [voiceLocale, voiceLocale === "ar-EG" ? "ar-SA" : "ar-EG"]
+        : [voiceLocale];
+
+      for (const locale of localesToTry) {
+        const voiceCompleted = await speakTextAndWait(speechText, locale);
+        if (voiceCompleted) {
+          return true;
+        }
+      }
+
+      return false;
+    },
+    [examLanguage, isArabicExam, voiceLocale],
+  );
+
   useEffect(() => {
     const audio = new Audio(BACKGROUND_MUSIC_SRC);
     audio.loop = true;
@@ -555,7 +831,10 @@ export default function TestPage() {
           );
         }
 
-        const questions = getQuestionsByNumbers(payload.questionIds);
+        const questions = getQuestionsByNumbers(
+          payload.questionIds,
+          examLanguage,
+        );
         if (questions.length === 0) {
           throw new Error("No questions are configured for this session.");
         }
@@ -587,23 +866,26 @@ export default function TestPage() {
     return () => {
       active = false;
     };
-  }, [sessionId]);
+  }, [sessionId, examLanguage]);
 
-  async function postEvent(
-    eventType: "click" | "hit" | "miss",
-    questionId: string,
-    optionId?: string,
-  ) {
-    const response = await fetch(`/api/session/${sessionId}/event`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventType, questionId, optionId }),
-    });
+  const postEvent = useCallback(
+    async (
+      eventType: "click" | "hit" | "miss",
+      questionId: string,
+      optionId?: string,
+    ) => {
+      const response = await fetch(`/api/session/${sessionId}/event`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventType, questionId, optionId }),
+      });
 
-    if (!response.ok) {
-      throw new Error("Unable to save event.");
-    }
-  }
+      if (!response.ok) {
+        throw new Error("Unable to save event.");
+      }
+    },
+    [sessionId],
+  );
 
   async function finishSession() {
     const response = await fetch(`/api/session/${sessionId}/finish`, {
@@ -622,6 +904,7 @@ export default function TestPage() {
     setStats({ clicks: 0, hits: 0, misses: 0 });
     setGridCells([]);
     setActivePrompt(null);
+    setPromptCycleIndex(0);
     setPendingCorrectionChoices([]);
     setSelectedArrangementIndices([]);
     setPendingLetterReplacementIndex(null);
@@ -640,73 +923,87 @@ export default function TestPage() {
   }
 
   function moveToNextPrompt(currentQuestion: Question) {
-    const nextPrompt = resolveActivePrompt(
-      currentQuestion,
-      activePrompt?.visualCue,
-    );
+    const nextPrompt = shouldUseSequentialPromptCycle(currentQuestion)
+      ? (() => {
+          const sequence = buildPromptSequence(currentQuestion);
+          const nextIndex = (promptCycleIndex + 1) % sequence.length;
+          setPromptCycleIndex(nextIndex);
+          return sequence[nextIndex];
+        })()
+      : resolveActivePrompt(currentQuestion, activePrompt?.visualCue);
+
     setActivePrompt(nextPrompt);
     setPendingCorrectionChoices([]);
     setSelectedArrangementIndices([]);
     setPendingLetterReplacementIndex(null);
     setPendingReplacementTargetLetter(null);
-    setGridCells(buildAnswerOptions(currentQuestion, nextPrompt));
-  }
-
-  function advanceTypedRoundOrFinish(currentQuestion: Question) {
-    if (typedPromptSequence.length === 0) {
-      setPhase("summary");
-      return;
-    }
-
-    const hasNextRound = typedPromptIndex < typedPromptSequence.length - 1;
-
-    if (!hasNextRound) {
-      setPhase("summary");
-      return;
-    }
-
-    const nextIndex = typedPromptIndex + 1;
-    const nextPrompt = typedPromptSequence[nextIndex];
-    setTypedPromptIndex(nextIndex);
-    setActivePrompt(nextPrompt);
-    setTypedInput("");
-    setShowVisualSequence(false);
-    setTypedRoundStage("cue");
-    setTimeLeft(QUESTION_DURATION_SECONDS);
-    setGridCells(buildAnswerOptions(currentQuestion, nextPrompt));
-  }
-
-  function completeTypedRound(
-    currentQuestion: Question,
-    submittedText: string,
-  ) {
-    const expected = normalizeToken(
-      activePrompt?.targetToken ?? currentQuestion.targetToken,
+    setGridCells(
+      buildAnswerOptions(currentQuestion, nextPrompt, typedKeyboardKeys),
     );
-    const typed = normalizeToken(submittedText);
-    const isHit = typed.length > 0 && typed === expected;
-
-    setStats((previous) => ({
-      clicks: previous.clicks,
-      hits: previous.hits + (isHit ? 1 : 0),
-      misses: previous.misses + (isHit ? 0 : 1),
-    }));
-
-    void postEvent(
-      isHit ? "hit" : "miss",
-      currentQuestion.id,
-      `${typedPromptIndex}:${typed}`,
-    ).catch((eventError) => {
-      setError(
-        eventError instanceof Error ? eventError.message : "Unexpected error.",
-      );
-    });
-
-    advanceTypedRoundOrFinish(currentQuestion);
   }
+
+  const advanceTypedRoundOrFinish = useCallback(
+    (currentQuestion: Question) => {
+      if (typedPromptSequence.length === 0) {
+        setPhase("summary");
+        return;
+      }
+
+      const hasNextRound = typedPromptIndex < typedPromptSequence.length - 1;
+
+      if (!hasNextRound) {
+        setPhase("summary");
+        return;
+      }
+
+      const nextIndex = typedPromptIndex + 1;
+      const nextPrompt = typedPromptSequence[nextIndex];
+      setTypedPromptIndex(nextIndex);
+      setActivePrompt(nextPrompt);
+      setTypedInput("");
+      setShowVisualSequence(false);
+      setTypedRoundStage("cue");
+      setTimeLeft(QUESTION_DURATION_SECONDS);
+      setGridCells(
+        buildAnswerOptions(currentQuestion, nextPrompt, typedKeyboardKeys),
+      );
+    },
+    [typedPromptSequence, typedPromptIndex, typedKeyboardKeys],
+  );
+
+  const completeTypedRound = useCallback(
+    (currentQuestion: Question, submittedText: string) => {
+      const expected = normalizeToken(
+        activePrompt?.targetToken ?? currentQuestion.targetToken,
+      );
+      const typed = normalizeToken(submittedText);
+      const isHit = typed.length > 0 && typed === expected;
+
+      setStats((previous) => ({
+        clicks: previous.clicks,
+        hits: previous.hits + (isHit ? 1 : 0),
+        misses: previous.misses + (isHit ? 0 : 1),
+      }));
+
+      void postEvent(
+        isHit ? "hit" : "miss",
+        currentQuestion.id,
+        `${typedPromptIndex}:${typed}`,
+      ).catch((eventError) => {
+        setError(
+          eventError instanceof Error
+            ? eventError.message
+            : "Unexpected error.",
+        );
+      });
+
+      advanceTypedRoundOrFinish(currentQuestion);
+    },
+    [activePrompt, typedPromptIndex, postEvent, advanceTypedRoundOrFinish],
+  );
 
   useEffect(() => {
-    if (!question || phase !== "voice") {
+    if (!question || phase !== "voice" || !isSpeechReady) {
       return;
     }
 
@@ -714,7 +1011,7 @@ export default function TestPage() {
 
     async function startQuestionWithVoice() {
       setIsVoicePlaying(true);
-      const voiceCompleted = await speakTextAndWait(question.audioText);
+      const voiceCompleted = await speakWithVoiceFallback(question.audioText);
 
       if (!active) {
         return;
@@ -722,6 +1019,7 @@ export default function TestPage() {
 
       // Fallback in browsers where speech end event is unreliable.
       if (!voiceCompleted) {
+        setError(voiceUnavailableMessage);
         await new Promise((resolve) => setTimeout(resolve, 1200));
       }
 
@@ -738,12 +1036,22 @@ export default function TestPage() {
         setTypedRoundStage("cue");
         setShowVisualSequence(false);
         setActivePrompt(firstPrompt);
-        setGridCells(buildAnswerOptions(question, firstPrompt));
+        setGridCells(
+          buildAnswerOptions(question, firstPrompt, typedKeyboardKeys),
+        );
       } else {
-        const initialPrompt = resolveActivePrompt(question);
+        const initialPrompt = shouldUseSequentialPromptCycle(question)
+          ? (() => {
+              const sequence = buildPromptSequence(question);
+              setPromptCycleIndex(0);
+              return sequence[0];
+            })()
+          : resolveActivePrompt(question);
         setActivePrompt(initialPrompt);
         setPendingCorrectionChoices([]);
-        setGridCells(buildAnswerOptions(question, initialPrompt));
+        setGridCells(
+          buildAnswerOptions(question, initialPrompt, typedKeyboardKeys),
+        );
       }
       setIsVoicePlaying(false);
       setPhase("active");
@@ -754,7 +1062,15 @@ export default function TestPage() {
     return () => {
       active = false;
     };
-  }, [question, phase, isTypedRecallMode]);
+  }, [
+    question,
+    phase,
+    isTypedRecallMode,
+    typedKeyboardKeys,
+    isSpeechReady,
+    voiceUnavailableMessage,
+    speakWithVoiceFallback,
+  ]);
 
   useEffect(() => {
     if (!question || !isTypedRecallMode || phase !== "active") {
@@ -791,7 +1107,7 @@ export default function TestPage() {
 
         setShowVisualSequence(false);
       } else {
-        const voiceCompleted = await speakTextAndWait(
+        const voiceCompleted = await speakWithVoiceFallback(
           currentPrompt.targetToken,
         );
 
@@ -800,6 +1116,7 @@ export default function TestPage() {
         }
 
         if (!voiceCompleted) {
+          setError(voiceUnavailableMessage);
           await new Promise((resolve) => setTimeout(resolve, 900));
         }
       }
@@ -825,6 +1142,8 @@ export default function TestPage() {
     typedPromptSequence,
     typedPromptIndex,
     activePrompt,
+    voiceUnavailableMessage,
+    speakWithVoiceFallback,
   ]);
 
   useEffect(() => {
@@ -859,6 +1178,7 @@ export default function TestPage() {
     typedRoundStage,
     question,
     typedInput,
+    completeTypedRound,
   ]);
 
   function handleAnswerClick(clickedToken: string, answerIndex: number) {
@@ -1034,7 +1354,8 @@ export default function TestPage() {
 
         const choices = buildFiveLetterChoices(
           correctionTarget,
-          question.correctionDistractorTokens,
+          activePrompt?.correctionDistractorTokens ??
+            question.correctionDistractorTokens,
         );
         setPendingLetterReplacementIndex(answerIndex);
         setPendingReplacementTargetLetter(correctionTarget);
@@ -1257,16 +1578,22 @@ export default function TestPage() {
 
   if (questionSetLoading) {
     return (
-      <main className="mx-auto max-w-4xl px-6 py-16">
-        <p className="text-slate-700">Loading age-specific question set...</p>
+      <main
+        className="mx-auto max-w-4xl px-6 py-16"
+        dir={isArabicExam ? "rtl" : "ltr"}
+      >
+        <p className="text-slate-700">{copy.loadQuestionSet}</p>
       </main>
     );
   }
 
   if (!question) {
     return (
-      <main className="mx-auto max-w-4xl px-6 py-16">
-        <p className="text-red-700">No question found for this session.</p>
+      <main
+        className="mx-auto max-w-4xl px-6 py-16"
+        dir={isArabicExam ? "rtl" : "ltr"}
+      >
+        <p className="text-red-700">{copy.noQuestionFound}</p>
         {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
       </main>
     );
@@ -1274,7 +1601,10 @@ export default function TestPage() {
 
   if (phase === "voice") {
     return (
-      <main className="relative h-dvh w-full overflow-hidden">
+      <main
+        className="relative h-dvh w-full overflow-hidden"
+        dir={isArabicExam ? "rtl" : "ltr"}
+      >
         <div
           aria-hidden
           className="absolute inset-0 bg-cover bg-center"
@@ -1287,12 +1617,29 @@ export default function TestPage() {
             <p className="text-sm font-medium text-slate-500">
               {question.title} ({index + 1}/{total})
             </p>
-            <h1 className="mt-4 text-3xl font-semibold text-slate-800">Listen</h1>
+            <h1 className="mt-4 text-3xl font-semibold text-slate-800">
+              {copy.listenHeading}
+            </h1>
             <p className="mt-3 text-slate-500">
-              The task will appear after the voice instruction.
+              {isSpeechReady ? copy.voiceHint : copy.unlockVoiceHint}
             </p>
-            {isVoicePlaying ? (
-              <p className="mt-5 text-sm text-slate-400">Audio is playing...</p>
+            {!isSpeechReady ? (
+              <button
+                type="button"
+                onClick={handleEnableSpeech}
+                disabled={isEnablingSpeech}
+                className="mt-5 inline-flex rounded-lg border border-cyan-300 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isEnablingSpeech
+                  ? copy.enablingVoiceButton
+                  : copy.enableVoiceButton}
+              </button>
+            ) : null}
+            {isSpeechReady && isVoicePlaying ? (
+              <p className="mt-5 text-sm text-slate-400">{copy.audioPlaying}</p>
+            ) : null}
+            {error ? (
+              <p className="mt-4 text-sm text-amber-700">{error}</p>
             ) : null}
 
             {SHOW_SKIP_BUTTON ? (
@@ -1301,7 +1648,7 @@ export default function TestPage() {
                 onClick={handleSkip}
                 className="mt-8 inline-flex rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
               >
-                Skip (testing)
+                {copy.skipTesting}
               </button>
             ) : null}
           </div>
@@ -1312,7 +1659,10 @@ export default function TestPage() {
 
   if (phase === "summary" || phase === "finishing") {
     return (
-      <main className="relative h-dvh w-full overflow-hidden">
+      <main
+        className="relative h-dvh w-full overflow-hidden"
+        dir={isArabicExam ? "rtl" : "ltr"}
+      >
         <div
           aria-hidden
           className="absolute inset-0 bg-cover bg-center"
@@ -1323,16 +1673,18 @@ export default function TestPage() {
         <div className="relative z-10 mx-auto flex h-full w-full max-w-3xl items-center justify-center px-6 py-10">
           <div className="w-full max-w-md rounded-2xl border border-sky-200 bg-white p-8 text-center shadow-sm">
             <p className="text-sm font-medium text-slate-500">
-              {question.title} complete
+              {question.title} {copy.completeLabel}
             </p>
             <h1 className="mt-4 text-3xl font-semibold text-slate-800">
-              You got {score} points
+              {copy.pointsPrefix} {score} {copy.pointsSuffix}
             </h1>
-            <p className="mt-2 text-slate-500">Progress: {progressPercent}%</p>
+            <p className="mt-2 text-slate-500">
+              {copy.progressPrefix} {progressPercent}%
+            </p>
 
             {mustRetakeQuestion ? (
               <p className="mt-3 text-sm font-medium text-amber-700">
-                No clicks were detected. Please retake this question.
+                {copy.noClicks}
               </p>
             ) : null}
 
@@ -1340,7 +1692,9 @@ export default function TestPage() {
               {progressPercent}%
             </div>
 
-            {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
+            {error ? (
+              <p className="mt-4 text-sm text-red-700">{error}</p>
+            ) : null}
 
             <button
               type="button"
@@ -1349,12 +1703,12 @@ export default function TestPage() {
               className="mt-8 inline-flex w-full items-center justify-center rounded-lg border border-sky-300 bg-white px-4 py-3 font-semibold text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {phase === "finishing"
-                ? "Finishing..."
+                ? copy.finishing
                 : mustRetakeQuestion
-                  ? "Retake Question"
+                  ? copy.retake
                   : isLastQuestion
-                    ? "View Final Result"
-                    : "Continue"}
+                    ? copy.viewResult
+                    : copy.continue}
             </button>
           </div>
         </div>
@@ -1410,7 +1764,10 @@ export default function TestPage() {
   };
 
   return (
-    <main className="relative h-dvh w-full overflow-hidden">
+    <main
+      className="relative h-dvh w-full overflow-hidden"
+      dir={isArabicExam ? "rtl" : "ltr"}
+    >
       <div
         aria-hidden
         className="absolute inset-0 bg-cover bg-center"
@@ -1425,14 +1782,14 @@ export default function TestPage() {
             onClick={handleSkip}
             className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
           >
-            Skip
+            {copy.skip}
           </button>
           <button
             type="button"
             onClick={toggleBackgroundMusicMute}
             className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
           >
-            {isBackgroundMusicMuted ? "Unmute Music" : "Mute Music"}
+            {isBackgroundMusicMuted ? copy.unmuteMusic : copy.muteMusic}
           </button>
         </div>
       ) : null}
@@ -1464,25 +1821,31 @@ export default function TestPage() {
             <>
               <div className="rounded-sm border border-sky-200 bg-white px-8 py-5 text-center text-slate-700 sm:min-w-105">
                 <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                  Round {typedPromptProgress}
+                  {isArabicExam
+                    ? `جولة ${typedPromptProgress}`
+                    : `Round ${typedPromptProgress}`}
                 </div>
-                <div className="mt-2 min-h-14 text-4xl tracking-[0.24em] text-slate-700 sm:text-5xl">
+                <div
+                  className={`mt-2 min-h-14 text-4xl text-slate-700 sm:text-5xl ${
+                    isArabicExam ? "tracking-normal" : "tracking-[0.24em]"
+                  }`}
+                >
                   {typedDisplayValue}
                 </div>
                 {isVoicePlaying && typedRoundStage === "cue" ? (
                   <p className="mt-2 text-sm text-slate-400">
-                    Memorize and type
+                    {copy.memorizeAndType}
                   </p>
                 ) : null}
                 {typedRoundStage === "input" ? (
                   <p className="mt-2 text-sm text-slate-400">
-                    Typed {typedInput.length}/{typedExpectedLength}
+                    {copy.typedPrefix} {typedInput.length}/{typedExpectedLength}
                   </p>
                 ) : null}
               </div>
 
               <div className="flex flex-col items-center gap-2">
-                {TYPE_KEYBOARD_ROWS.map((row, rowIndex) => (
+                {typedKeyboardRows.map((row, rowIndex) => (
                   <div
                     key={`kb-row-${rowIndex}`}
                     className="grid gap-2 sm:gap-2.5"
@@ -1498,7 +1861,7 @@ export default function TestPage() {
                         onClick={() =>
                           handleAnswerClick(
                             keyToken,
-                            TYPE_KEYBOARD_KEYS.indexOf(keyToken),
+                            typedKeyboardKeys.indexOf(keyToken),
                           )
                         }
                         className="rounded-sm border border-sky-200 bg-white px-2 font-semibold leading-tight text-slate-800 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
@@ -1647,7 +2010,7 @@ export default function TestPage() {
                       interactionType === "letterChoices" ||
                       interactionType === "wordLetters" ||
                       interactionType === "wordToLetterChoices"
-                          ? "min(11vw, 7.8vh)"
+                        ? "min(11vw, 7.8vh)"
                         : isSentenceSegmentationMode
                           ? "min(88vw, 56rem)"
                           : cell.length > 3
@@ -1657,7 +2020,7 @@ export default function TestPage() {
                       interactionType === "letterChoices" ||
                       interactionType === "wordLetters" ||
                       interactionType === "wordToLetterChoices"
-                          ? "min(11vw, 7.8vh)"
+                        ? "min(11vw, 7.8vh)"
                         : isSentenceSegmentationMode
                           ? "auto"
                           : cell.length > 3
@@ -1666,7 +2029,7 @@ export default function TestPage() {
                     fontSize:
                       interactionType === "wordLetters" ||
                       interactionType === "wordToLetterChoices"
-                          ? "clamp(1.1rem, 2vw, 1.45rem)"
+                        ? "clamp(1.1rem, 2vw, 1.45rem)"
                         : isSentenceSegmentationMode
                           ? "clamp(1.05rem, 1.9vw, 1.45rem)"
                           : cell.length > 3

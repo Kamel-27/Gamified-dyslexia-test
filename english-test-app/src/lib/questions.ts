@@ -1,4 +1,7 @@
 import { Question } from "@/lib/types";
+import { QUESTION_BANK_AR } from "@/lib/questions-ar";
+
+export type ExamLanguage = "en" | "ar";
 
 export const QUESTION_BANK: Question[] = [
   {
@@ -1028,19 +1031,39 @@ function parseQuestionNumber(questionId: string) {
   return number;
 }
 
-const QUESTION_LOOKUP = new Map<number, Question>(
-  QUESTION_BANK.flatMap((question) => {
-    const number = parseQuestionNumber(question.id);
-    if (!number) {
-      return [];
-    }
+function buildQuestionLookup(questionBank: Question[]) {
+  return new Map<number, Question>(
+    questionBank.flatMap((question) => {
+      const number = parseQuestionNumber(question.id);
+      if (!number) {
+        return [];
+      }
 
-    return [[number, question] as const];
-  }),
-);
+      return [[number, question] as const];
+    }),
+  );
+}
 
-export function getQuestionsByNumbers(questionNumbers: number[]) {
+const QUESTION_LOOKUP_BY_LANGUAGE: Record<
+  ExamLanguage,
+  Map<number, Question>
+> = {
+  en: buildQuestionLookup(QUESTION_BANK),
+  ar: buildQuestionLookup(QUESTION_BANK_AR),
+};
+
+export function getQuestionsByNumbers(
+  questionNumbers: number[],
+  language: ExamLanguage = "en",
+) {
+  const lookup =
+    QUESTION_LOOKUP_BY_LANGUAGE[language] ?? QUESTION_LOOKUP_BY_LANGUAGE.en;
+
   return questionNumbers
-    .map((questionNumber) => QUESTION_LOOKUP.get(questionNumber))
+    .map((questionNumber) => lookup.get(questionNumber))
     .filter((question): question is Question => !!question);
+}
+
+export function getQuestionBank(language: ExamLanguage = "en") {
+  return language === "ar" ? QUESTION_BANK_AR : QUESTION_BANK;
 }
