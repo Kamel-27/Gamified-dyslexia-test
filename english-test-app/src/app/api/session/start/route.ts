@@ -3,6 +3,7 @@ import * as memorySessionStore from "@/lib/session-store";
 import * as memoryStudentStore from "@/lib/student-store";
 import * as dbSessionStore from "@/lib/db-session-store";
 import * as dbStudentStore from "@/lib/db-student-store";
+import { getRequestSession } from "@/lib/auth-session";
 import { getAgeGroupForAge, getQuestionIdsForAge } from "@/lib/question-config";
 import type { ExamLanguage } from "@/lib/questions";
 import { Demographics } from "@/lib/types";
@@ -15,6 +16,11 @@ function resolveExamLanguage(value: unknown): ExamLanguage {
 
 export async function POST(request: Request) {
   try {
+    const authSession = await getRequestSession(request);
+    if (!authSession) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
     const body = (await request.json()) as
       | (Partial<Demographics> & {
           studentId?: string;

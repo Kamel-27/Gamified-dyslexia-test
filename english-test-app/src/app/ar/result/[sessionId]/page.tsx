@@ -2,12 +2,12 @@ import { ResultPageView } from "@/components/result/ResultPageView";
 import { getServerSession } from "@/lib/auth-session";
 import { redirect } from "next/navigation";
 
-export default async function ResultPage() {
+export default async function ArabicResultPage() {
   const session = await getServerSession();
 
   if (!session) {
-    redirect("/login");
+    redirect("/ar/login");
   }
 
-  return <ResultPageView locale="en" />;
+  return <ResultPageView locale="ar" />;
 }

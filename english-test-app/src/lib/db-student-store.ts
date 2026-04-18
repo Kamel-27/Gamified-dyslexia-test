@@ -1,6 +1,12 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { listAttemptSummariesForStudent } from "@/lib/db-session-store";
 import { Demographics, StudentRecord, StudentWithAttempts } from "@/lib/types";
+
+function toInputJson(value: unknown): Prisma.InputJsonValue {
+  // Strip undefined values so payloads are valid JSON for Prisma Json columns.
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
 
 export async function createStudent(
   name: string,
@@ -9,7 +15,7 @@ export async function createStudent(
   const student = await db.student.create({
     data: {
       name,
-      demographics: demographics as any,
+      demographics: toInputJson(demographics),
     },
   });
 

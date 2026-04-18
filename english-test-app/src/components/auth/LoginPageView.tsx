@@ -3,8 +3,83 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
+import {
+  type AppLocale,
+  isArabicLocale,
+  localePath,
+  oppositeLocale,
+} from "@/lib/locale";
 
-export function LoginPageView() {
+type LoginPageViewProps = {
+  locale?: AppLocale;
+};
+
+const copyByLocale = {
+  en: {
+    fillFields: "Please fill in all fields.",
+    validEmail: "Please enter a valid email.",
+    loginFailed: "Invalid email or password. Please try again.",
+    googleNotConfigured:
+      "Google sign-in is not configured yet. Add your Google provider in Better Auth settings.",
+    backHome: "Back to home",
+    title: "Welcome back",
+    subtitlePrefix: "Do not have an account?",
+    subtitleLink: "Create one free",
+    socialButton: "Continue with Google",
+    divider: "or sign in with email",
+    email: "Email address",
+    password: "Password",
+    forgot: "Forgot password?",
+    submit: "Sign in",
+    submitting: "Signing in...",
+    hide: "Hide",
+    show: "Show",
+    leftHeadingLine1: "Every child deserves",
+    leftHeadingLine2: "to be understood",
+    leftBody:
+      "Lexora gives parents and educators a fast, research-backed way to identify dyslexia risk before it becomes a school crisis.",
+    stat1: "screening sensitivity",
+    stat2: "assessment time",
+    stat3: "age range",
+    disclaimer:
+      "Lexora is a screening tool only. Results do not constitute a diagnosis.",
+    note: "Lexora is a screening tool only. Results indicate risk, not diagnosis.",
+    languageSwitch: "العربية",
+  },
+  ar: {
+    fillFields: "يرجى إدخال جميع الحقول.",
+    validEmail: "يرجى إدخال بريد إلكتروني صحيح.",
+    loginFailed: "بيانات الدخول غير صحيحة. حاول مرة أخرى.",
+    googleNotConfigured:
+      "تسجيل الدخول بجوجل غير مُفعّل حاليا. أضف إعدادات Google في Better Auth.",
+    backHome: "العودة للرئيسية",
+    title: "أهلا بعودتك",
+    subtitlePrefix: "ليس لديك حساب؟",
+    subtitleLink: "أنشئ حسابا مجانا",
+    socialButton: "المتابعة عبر Google",
+    divider: "أو سجّل بالبريد الإلكتروني",
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    forgot: "نسيت كلمة المرور؟",
+    submit: "تسجيل الدخول",
+    submitting: "جاري تسجيل الدخول...",
+    hide: "إخفاء",
+    show: "إظهار",
+    leftHeadingLine1: "كل طفل يستحق",
+    leftHeadingLine2: "أن يُفهم بشكل صحيح",
+    leftBody:
+      "تقدم Lexora وسيلة سريعة ومدعومة بحثيا لمساعدة الأهل والمعلمين على اكتشاف مؤشرات خطر عسر القراءة مبكرا.",
+    stat1: "حساسية الفحص",
+    stat2: "مدة التقييم",
+    stat3: "الفئة العمرية",
+    disclaimer: "Lexora أداة فحص أولي فقط. النتائج ليست تشخيصا نهائيا.",
+    note: "Lexora أداة فحص فقط. النتيجة تقدير للخطر وليست تشخيصا.",
+    languageSwitch: "English",
+  },
+} as const;
+
+export function LoginPageView({ locale = "en" }: LoginPageViewProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -12,12 +87,16 @@ export function LoginPageView() {
   const [error, setError] = useState("");
   const [showPass, setShowPass] = useState(false);
 
+  const isArabic = isArabicLocale(locale);
+  const t = copyByLocale[locale];
+  const dashboardPath = localePath(locale, "/dashboard");
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError("");
 
     if (!email || !password) {
-      setError("Please fill in all fields.");
+      setError(t.fillFields);
       return;
     }
 
@@ -25,16 +104,23 @@ export function LoginPageView() {
 
     try {
       if (!email.includes("@")) {
-        throw new Error("Please enter a valid email.");
+        throw new Error(t.validEmail);
       }
 
-      sessionStorage.setItem("teacherEmail", email);
-      router.push("/dashboard");
+      const response = await authClient.signIn.email({
+        email,
+        password,
+        callbackURL: dashboardPath,
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || t.loginFailed);
+      }
+
+      router.push(dashboardPath);
     } catch (submitError) {
       setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Invalid email or password. Please try again.",
+        submitError instanceof Error ? submitError.message : t.loginFailed,
       );
     } finally {
       setLoading(false);
@@ -42,15 +128,7 @@ export function LoginPageView() {
   }
 
   async function handleGoogle() {
-    setLoading(true);
-    setError("");
-
-    try {
-      sessionStorage.setItem("teacherEmail", "google-user@example.com");
-      router.push("/dashboard");
-    } finally {
-      setLoading(false);
-    }
+    setError(t.googleNotConfigured);
   }
 
   return (
@@ -143,7 +221,11 @@ export function LoginPageView() {
         }
       `}</style>
 
-      <div className="auth-page">
+      <div
+        className="auth-page"
+        dir={isArabic ? "rtl" : "ltr"}
+        lang={isArabic ? "ar" : "en"}
+      >
         <div className="auth-left">
           <div className="auth-left-deco-1" />
           <div className="auth-left-deco-2" />
@@ -152,47 +234,46 @@ export function LoginPageView() {
           </div>
           <div className="auth-left-content">
             <h2 className="auth-left-h">
-              Every child deserves
+              {t.leftHeadingLine1}
               <br />
-              <em>to be understood</em>
+              <em>{t.leftHeadingLine2}</em>
             </h2>
-            <p className="auth-left-p">
-              Lexora gives parents and educators a fast, research-backed way to
-              identify dyslexia risk before it becomes a school crisis.
-            </p>
+            <p className="auth-left-p">{t.leftBody}</p>
             <div className="auth-left-stats">
               <div>
                 <div className="auth-left-stat-num">80%+</div>
-                <div className="auth-left-stat-label">
-                  screening sensitivity
-                </div>
+                <div className="auth-left-stat-label">{t.stat1}</div>
               </div>
               <div>
                 <div className="auth-left-stat-num">15 min</div>
-                <div className="auth-left-stat-label">assessment time</div>
+                <div className="auth-left-stat-label">{t.stat2}</div>
               </div>
               <div>
                 <div className="auth-left-stat-num">7-17</div>
-                <div className="auth-left-stat-label">age range</div>
+                <div className="auth-left-stat-label">{t.stat3}</div>
               </div>
             </div>
           </div>
-          <p className="auth-left-disclaimer">
-            Lexora is a screening tool only. Results do not constitute a
-            diagnosis.
-          </p>
+          <p className="auth-left-disclaimer">{t.disclaimer}</p>
         </div>
 
         <div className="auth-right">
           <div className="auth-form-wrap">
-            <Link href="/" className="auth-back">
-              Back to home
+            <Link href={localePath(locale, "/")} className="auth-back">
+              {t.backHome}
+            </Link>
+            <Link
+              href={localePath(oppositeLocale(locale), "/login")}
+              className="auth-back"
+              style={{ marginLeft: 10 }}
+            >
+              {t.languageSwitch}
             </Link>
 
-            <h1 className="auth-title">Welcome back</h1>
+            <h1 className="auth-title">{t.title}</h1>
             <p className="auth-subtitle">
-              Do not have an account?{" "}
-              <Link href="/signup">Create one free</Link>
+              {t.subtitlePrefix}{" "}
+              <Link href={localePath(locale, "/signup")}>{t.subtitleLink}</Link>
             </p>
 
             <button
@@ -200,12 +281,12 @@ export function LoginPageView() {
               onClick={handleGoogle}
               disabled={loading}
             >
-              Continue with Google
+              {t.socialButton}
             </button>
 
             <div className="auth-divider">
               <div className="auth-divider-line" />
-              <span className="auth-divider-text">or sign in with email</span>
+              <span className="auth-divider-text">{t.divider}</span>
               <div className="auth-divider-line" />
             </div>
 
@@ -214,7 +295,7 @@ export function LoginPageView() {
 
               <div className="auth-field">
                 <label className="auth-label" htmlFor="email">
-                  Email address
+                  {t.email}
                 </label>
                 <input
                   id="email"
@@ -231,10 +312,10 @@ export function LoginPageView() {
               <div className="auth-field">
                 <div className="auth-field-row">
                   <label className="auth-label" htmlFor="password">
-                    Password
+                    {t.password}
                   </label>
                   <Link href="#" className="auth-forgot">
-                    Forgot password?
+                    {t.forgot}
                   </Link>
                 </div>
                 <div className="auth-input-wrap">
@@ -255,20 +336,17 @@ export function LoginPageView() {
                     onClick={() => setShowPass((value) => !value)}
                     aria-label={showPass ? "Hide password" : "Show password"}
                   >
-                    {showPass ? "Hide" : "Show"}
+                    {showPass ? t.hide : t.show}
                   </button>
                 </div>
               </div>
 
               <button type="submit" className="auth-submit" disabled={loading}>
-                {loading ? "Signing in..." : "Sign in"}
+                {loading ? t.submitting : t.submit}
               </button>
             </form>
 
-            <div className="auth-note">
-              Lexora is a screening tool only. Results indicate risk, not
-              diagnosis.
-            </div>
+            <div className="auth-note">{t.note}</div>
           </div>
         </div>
       </div>

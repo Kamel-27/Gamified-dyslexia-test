@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { faqs, stats } from "@/components/marketing/landing-data";
+import {
+  faqs as faqsEn,
+  stats as statsEn,
+} from "@/components/marketing/landing-data";
 import {
   IconArrow,
   IconCheck,
@@ -7,8 +10,224 @@ import {
   IconGame,
   IconShield,
 } from "@/components/marketing/icons";
+import {
+  type AppLocale,
+  isArabicLocale,
+  localePath,
+  oppositeLocale,
+} from "@/lib/locale";
 
-export function LandingPageView() {
+type LandingPageViewProps = {
+  locale?: AppLocale;
+};
+
+const faqsAr = [
+  {
+    q: "ما هو عسر القراءة (الديسلكسيا) بالضبط؟",
+    a: "عسر القراءة هو اختلاف تعلمي يؤثر على معالجة اللغة المكتوبة والمنطوقة، ولا يرتبط بمستوى الذكاء. يظهر غالبا في صعوبة التعرف على الكلمات والتهجئة وفك الرموز الصوتية.",
+  },
+  {
+    q: "ما مدى شيوع عسر القراءة؟",
+    a: "التقديرات العالمية تتراوح عادة بين 5% و17% حسب أدوات القياس، وفي المنطقة العربية ما زال الاكتشاف المبكر أقل من المطلوب.",
+  },
+  {
+    q: "لماذا الفحص المبكر مهم؟",
+    a: "كلما كان الاكتشاف مبكرا، كانت فرص التدخل الفعال أعلى. الفحص المبكر يقلل الأثر الدراسي والنفسي على الطفل.",
+  },
+  {
+    q: "هل هذه النتيجة تشخيص نهائي؟",
+    a: "لا. Lexora أداة فحص أولي وليست تشخيصا طبيا. النتيجة الإيجابية تعني وجود مؤشرات خطر وتحتاج إلى تقييم متخصص.",
+  },
+  {
+    q: "هل يمكن تحسين حالة الطفل؟",
+    a: "نعم. برامج التدخل المبني على الوعي الصوتي والقراءة المنظمة تساعد بشكل واضح عند البدء مبكرا.",
+  },
+  {
+    q: "هل عسر القراءة في العربية يختلف عن الإنجليزية؟",
+    a: "هناك اختلافات لغوية وإملائية بين العربية والإنجليزية، لذلك صممنا مسارات وأسئلة مناسبة لكل لغة.",
+  },
+  {
+    q: "كيف تعرض المنصة دقة النتيجة؟",
+    a: "تعرض المنصة قيمة الاحتمال والعتبة لكل جلسة بشكل واضح لمساعدة المختصين في تفسير نتيجة الفحص.",
+  },
+  {
+    q: "ما البيانات التي تجمعها المنصة؟",
+    a: "نجمع بيانات التفاعل أثناء الاختبار مثل النقرات والإصابات والأخطاء والتوقيت، مع معلومات ديموغرافية أساسية فقط.",
+  },
+] as const;
+
+const statsAr = [
+  { num: "1 من 10", label: "أطفال قد يظهر لديهم عسر قراءة" },
+  { num: "35%", label: "قد يتأثر أداؤهم الدراسي بدون دعم" },
+  { num: "80%+", label: "حساسية فحص في أفضل الفئات" },
+  { num: "15 دقيقة", label: "مدة الاختبار التقريبية" },
+] as const;
+
+const copyByLocale = {
+  en: {
+    navSolutions: "Solutions",
+    navHow: "How it works",
+    navFaq: "FAQ",
+    signIn: "Sign in",
+    startScreening: "Start screening",
+    languageSwitch: "العربية",
+    badge: "AI-powered dyslexia screening - not a diagnosis",
+    heroTitleLine1: "Early screening.",
+    heroTitleLine2: "Earlier support.",
+    heroLead:
+      "Lexora helps parents and educators identify dyslexia risk in children aged 7-17 through a short, engaging online assessment.",
+    heroPrimary: "Begin assessment",
+    heroSecondary: "How it works",
+    heroTiny:
+      "Results are screening estimates only. Consult a qualified professional for diagnosis.",
+    disclaimer:
+      "Important: Lexora is a screening tool only. A positive result indicates risk and warrants professional evaluation.",
+    assessmentsEyebrow: "Our assessments",
+    assessmentsTitle: "Two ways to screen",
+    assessmentsBody:
+      "Both tools are grounded in published dyslexia research and validated on large participant groups.",
+    webcamTitle: "Webcam Eye-Tracking",
+    webcamBody:
+      "Tracks gaze patterns as the child reads and detects risk-linked fixation and regression signatures without special hardware.",
+    webcamFeatures: [
+      "No special equipment",
+      "Measures fixation and regression behavior",
+      "Age-appropriate reading passages",
+      "Results in under 10 minutes",
+    ],
+    webcamTag: "Available now",
+    gameTitle: "Gamified Language Test",
+    gameBody:
+      "A game-style assessment that measures phonological awareness, working memory, letter discrimination, and orthographic processing.",
+    gameFeatures: [
+      "Age-customized tracks",
+      "Arabic and English variants",
+      "Model-backed risk scoring",
+      "Fast completion",
+    ],
+    gameTag: "Core assessment",
+    stepsEyebrow: "Simple process",
+    stepsTitle: "From sign-up to report in minutes",
+    steps: [
+      {
+        n: "1",
+        h: "Create account",
+        p: "Register and enter child details.",
+      },
+      {
+        n: "2",
+        h: "Choose assessment",
+        p: "Select English or Arabic flow and start the test.",
+      },
+      {
+        n: "3",
+        h: "Child completes test",
+        p: "The child completes interactive tasks.",
+      },
+      {
+        n: "4",
+        h: "Review report",
+        p: "Open probability, threshold, and risk details.",
+      },
+    ],
+    faqEyebrow: "Common questions",
+    faqTitle: "Frequently asked questions",
+    ctaEyebrow: "Ready to start?",
+    ctaTitle: "Give your child the gift of early answers",
+    ctaBody: "Fifteen minutes today can prevent years of unnecessary struggle.",
+    ctaPrimary: "Start free assessment",
+    ctaSecondary: "Sign in",
+    footerFaq: "FAQ",
+    footerPrivacy: "Privacy",
+    footerAbout: "About",
+    footerCopyright: "Copyright 2026 Lexora - Screening tool only",
+  },
+  ar: {
+    navSolutions: "الحلول",
+    navHow: "كيف يعمل",
+    navFaq: "الأسئلة الشائعة",
+    signIn: "تسجيل الدخول",
+    startScreening: "ابدأ الفحص",
+    languageSwitch: "English",
+    badge: "فحص مخاطر عسر القراءة بالذكاء الاصطناعي - ليس تشخيصا",
+    heroTitleLine1: "فحص مبكر.",
+    heroTitleLine2: "دعم أسرع.",
+    heroLead:
+      "تساعد Lexora أولياء الأمور والمعلمين على اكتشاف مؤشرات خطر عسر القراءة للأطفال من 7 إلى 17 سنة عبر تقييم قصير وتفاعلي.",
+    heroPrimary: "ابدأ التقييم",
+    heroSecondary: "كيف يعمل",
+    heroTiny:
+      "النتائج تقديرية لأغراض الفحص فقط، ويجب مراجعة مختص للتشخيص النهائي.",
+    disclaimer:
+      "تنبيه: Lexora أداة فحص أولي فقط. النتيجة الإيجابية تعني وجود خطر محتمل وتحتاج إلى تقييم متخصص.",
+    assessmentsEyebrow: "أدوات التقييم",
+    assessmentsTitle: "طريقتان للفحص",
+    assessmentsBody:
+      "كلتا الأداتين مبنيتان على أبحاث منشورة حول عسر القراءة وتم التحقق منهما على عينات كبيرة.",
+    webcamTitle: "تتبع العين بالكاميرا",
+    webcamBody:
+      "يراقب نمط حركة العين أثناء القراءة ويكشف مؤشرات التثبيت والارتداد المرتبطة بالخطر دون أجهزة خاصة.",
+    webcamFeatures: [
+      "لا يحتاج أجهزة إضافية",
+      "يقيس التثبيت والارتداد البصري",
+      "نصوص مناسبة لكل فئة عمرية",
+      "نتيجة سريعة خلال دقائق",
+    ],
+    webcamTag: "متاح الآن",
+    gameTitle: "اختبار لغوي تفاعلي",
+    gameBody:
+      "اختبار بنمط الألعاب يقيس الوعي الصوتي والذاكرة العاملة وتمييز الحروف والمعالجة الإملائية.",
+    gameFeatures: [
+      "مسارات حسب العمر",
+      "نسخة عربية وإنجليزية",
+      "تنبؤ مدعوم بالنموذج",
+      "إنهاء سريع",
+    ],
+    gameTag: "الاختبار الأساسي",
+    stepsEyebrow: "خطوات بسيطة",
+    stepsTitle: "من التسجيل إلى التقرير خلال دقائق",
+    steps: [
+      {
+        n: "1",
+        h: "إنشاء حساب",
+        p: "سجل الحساب وأدخل بيانات الطالب.",
+      },
+      {
+        n: "2",
+        h: "اختيار التقييم",
+        p: "اختر المسار العربي أو الإنجليزي وابدأ الاختبار.",
+      },
+      {
+        n: "3",
+        h: "إكمال الاختبار",
+        p: "يكمل الطفل المهام التفاعلية المطلوبة.",
+      },
+      {
+        n: "4",
+        h: "عرض التقرير",
+        p: "اطلع على الاحتمال والعتبة ومستوى الخطر.",
+      },
+    ],
+    faqEyebrow: "أسئلة شائعة",
+    faqTitle: "الأسئلة الأكثر تكرارا",
+    ctaEyebrow: "جاهز للبدء؟",
+    ctaTitle: "امنح طفلك فرصة الاكتشاف المبكر",
+    ctaBody: "15 دقيقة اليوم قد تمنع سنوات من الصعوبات الدراسية غير الضرورية.",
+    ctaPrimary: "ابدأ الفحص المجاني",
+    ctaSecondary: "تسجيل الدخول",
+    footerFaq: "الأسئلة الشائعة",
+    footerPrivacy: "الخصوصية",
+    footerAbout: "حول المنصة",
+    footerCopyright: "حقوق النشر 2026 Lexora - أداة فحص أولي فقط",
+  },
+} as const;
+
+export function LandingPageView({ locale = "en" }: LandingPageViewProps) {
+  const isArabic = isArabicLocale(locale);
+  const t = copyByLocale[locale];
+  const stats = isArabic ? statsAr : statsEn;
+  const faqs = isArabic ? faqsAr : faqsEn;
+
   return (
     <>
       <style>{`
@@ -142,272 +361,250 @@ export function LandingPageView() {
         }
       `}</style>
 
-      <nav className="lx-nav">
-        <div className="lx-nav-inner">
-          <Link href="/" className="lx-logo">
-            Lexora<span>.</span>
-          </Link>
-          <div className="lx-nav-links">
-            <a href="#solutions">Solutions</a>
-            <a href="#how-it-works">How it works</a>
-            <a href="#faq">FAQ</a>
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <Link href="/login" className="lx-btn lx-btn-outline">
-              Sign in
-            </Link>
-            <Link href="/signup" className="lx-btn lx-btn-primary">
-              Start screening
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      <section className="lx-hero">
-        <div className="lx-hero-bg" />
-        <div className="lx-container">
-          <div className="lx-hero-inner">
-            <div className="lx-badge">
-              <IconShield />
-              AI-powered dyslexia screening - not a diagnosis
-            </div>
-            <h1 className="lx-h1 serif">
-              Early screening.
-              <br />
-              <em>Earlier support.</em>
-            </h1>
-            <p className="lx-lead">
-              Lexora helps parents and educators identify dyslexia risk in
-              children aged 7-17 through a short, engaging online assessment.
-            </p>
-            <div className="lx-hero-ctas">
-              <Link href="/signup" className="lx-btn lx-btn-primary lx-btn-lg">
-                Begin assessment <IconArrow />
-              </Link>
-              <a href="#solutions" className="lx-btn lx-btn-outline lx-btn-lg">
-                How it works
-              </a>
-            </div>
-            <p className="lx-disclaimer-tiny">
-              Results are screening estimates only. Consult a qualified
-              professional for diagnosis.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <div className="lx-disclaimer">
-        <div className="lx-container">
-          <div className="lx-disclaimer-inner">
-            <p className="lx-disclaimer-text">
-              <strong>Important:</strong> Lexora is a{" "}
-              <strong>screening tool only</strong>. A positive result indicates
-              risk and warrants professional evaluation.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <section className="lx-stats">
-        <div className="lx-container">
-          <div className="lx-stats-grid">
-            {stats.map((item) => (
-              <div className="lx-stat" key={item.label}>
-                <div className="lx-stat-num serif">{item.num}</div>
-                <div className="lx-stat-label">{item.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="lx-section lx-section-alt" id="solutions">
-        <div className="lx-container">
-          <p className="lx-eyebrow" style={{ textAlign: "center" }}>
-            Our assessments
-          </p>
-          <h2 className="lx-h2 serif" style={{ textAlign: "center" }}>
-            Two ways to screen
-          </h2>
-          <p
-            className="lx-body"
-            style={{ textAlign: "center", maxWidth: 560, margin: "0 auto" }}
-          >
-            Both tools are grounded in published dyslexia research and validated
-            on large participant groups.
-          </p>
-          <div className="lx-solutions">
-            <div className="lx-solution-card lx-sol-webcam">
-              <div className="lx-sol-bg-deco lx-sol-bg-deco-cyan" />
-              <div className="lx-sol-icon lx-sol-icon-cyan">
-                <IconEye />
-              </div>
-              <h3 className="lx-sol-h3 serif">Webcam Eye-Tracking</h3>
-              <p className="lx-sol-body">
-                Tracks gaze patterns as the child reads and detects risk-linked
-                fixation and regression signatures without special hardware.
-              </p>
-              <ul className="lx-sol-features">
-                {[
-                  "No special equipment",
-                  "Measures fixation and regression behavior",
-                  "Age-appropriate reading passages",
-                  "Results in under 10 minutes",
-                ].map((feature) => (
-                  <li key={feature}>
-                    <span className="check">
-                      <IconCheck />
-                    </span>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-              <span className="lx-sol-tag lx-sol-tag-cyan">Available now</span>
-            </div>
-
-            <div className="lx-solution-card lx-sol-game">
-              <div className="lx-sol-bg-deco lx-sol-bg-deco-indigo" />
-              <div className="lx-sol-icon lx-sol-icon-indigo">
-                <IconGame />
-              </div>
-              <h3 className="lx-sol-h3 serif">Gamified Language Test</h3>
-              <p className="lx-sol-body">
-                A game-style assessment that measures phonological awareness,
-                working memory, letter discrimination, and orthographic
-                processing.
-              </p>
-              <ul className="lx-sol-features">
-                {[
-                  "Age-customized tracks",
-                  "Arabic and English variants",
-                  "Model-backed risk scoring",
-                  "Fast completion",
-                ].map((feature) => (
-                  <li key={feature}>
-                    <span className="check">
-                      <IconCheck />
-                    </span>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-              <span className="lx-sol-tag lx-sol-tag-indigo">
-                Core assessment
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="lx-section" id="how-it-works">
-        <div className="lx-container">
-          <p className="lx-eyebrow" style={{ textAlign: "center" }}>
-            Simple process
-          </p>
-          <h2 className="lx-h2 serif" style={{ textAlign: "center" }}>
-            From sign-up to report in minutes
-          </h2>
-          <div className="lx-steps">
-            {[
-              {
-                n: "1",
-                h: "Create account",
-                p: "Register and enter child details.",
-              },
-              {
-                n: "2",
-                h: "Choose assessment",
-                p: "Select English or Arabic flow and start the test.",
-              },
-              {
-                n: "3",
-                h: "Child completes test",
-                p: "The child completes interactive tasks.",
-              },
-              {
-                n: "4",
-                h: "Review report",
-                p: "Open probability, threshold, and risk details.",
-              },
-            ].map((step) => (
-              <div className="lx-step" key={step.n}>
-                <div className="lx-step-num serif">{step.n}</div>
-                <p className="lx-step-h">{step.h}</p>
-                <p className="lx-step-p">{step.p}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="lx-section lx-section-alt" id="faq">
-        <div className="lx-container">
-          <p className="lx-eyebrow" style={{ textAlign: "center" }}>
-            Common questions
-          </p>
-          <h2 className="lx-h2 serif" style={{ textAlign: "center" }}>
-            Frequently asked questions
-          </h2>
-          <div className="lx-faq">
-            {faqs.map((item) => (
-              <details className="lx-faq-item" key={item.q}>
-                <summary className="lx-faq-summary">{item.q}</summary>
-                <p className="lx-faq-a">{item.a}</p>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="lx-section lx-section-dark">
-        <div className="lx-container">
-          <div className="lx-cta-inner">
-            <p className="lx-eyebrow" style={{ color: "rgba(99,102,241,0.9)" }}>
-              Ready to start?
-            </p>
-            <h2 className="lx-h2-light serif">
-              Give your child the gift of early answers
-            </h2>
-            <p className="lx-body-dark lx-body" style={{ marginBottom: 36 }}>
-              Fifteen minutes today can prevent years of unnecessary struggle.
-            </p>
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                justifyContent: "center",
-                flexWrap: "wrap",
-              }}
-            >
-              <Link href="/signup" className="lx-btn lx-btn-primary lx-btn-lg">
-                Start free assessment <IconArrow />
-              </Link>
-              <Link href="/login" className="lx-btn lx-btn-ghost lx-btn-lg">
-                Sign in
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer className="lx-footer">
-        <div className="lx-container">
-          <div className="lx-footer-inner">
-            <span className="lx-footer-logo serif">
+      <div dir={isArabic ? "rtl" : "ltr"} lang={isArabic ? "ar" : "en"}>
+        <nav className="lx-nav">
+          <div className="lx-nav-inner">
+            <Link href={localePath(locale, "/")} className="lx-logo">
               Lexora<span>.</span>
-            </span>
-            <div className="lx-footer-links">
-              <a href="#faq">FAQ</a>
-              <a href="#">Privacy</a>
-              <a href="#">About</a>
-              <Link href="/login">Sign in</Link>
+            </Link>
+            <div className="lx-nav-links">
+              <a href="#solutions">{t.navSolutions}</a>
+              <a href="#how-it-works">{t.navHow}</a>
+              <a href="#faq">{t.navFaq}</a>
             </div>
-            <p style={{ fontSize: 12 }}>
-              Copyright 2026 Lexora - Screening tool only
-            </p>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <Link
+                href={localePath(locale, "/login")}
+                className="lx-btn lx-btn-outline"
+              >
+                {t.signIn}
+              </Link>
+              <Link
+                href={localePath(locale, "/signup")}
+                className="lx-btn lx-btn-primary"
+              >
+                {t.startScreening}
+              </Link>
+              <Link
+                href={localePath(oppositeLocale(locale), "/")}
+                className="lx-btn lx-btn-outline"
+              >
+                {t.languageSwitch}
+              </Link>
+            </div>
+          </div>
+        </nav>
+
+        <section className="lx-hero">
+          <div className="lx-hero-bg" />
+          <div className="lx-container">
+            <div className="lx-hero-inner">
+              <div className="lx-badge">
+                <IconShield />
+                {t.badge}
+              </div>
+              <h1 className="lx-h1 serif">
+                {t.heroTitleLine1}
+                <br />
+                <em>{t.heroTitleLine2}</em>
+              </h1>
+              <p className="lx-lead">{t.heroLead}</p>
+              <div className="lx-hero-ctas">
+                <Link
+                  href={localePath(locale, "/signup")}
+                  className="lx-btn lx-btn-primary lx-btn-lg"
+                >
+                  {t.heroPrimary} <IconArrow />
+                </Link>
+                <a
+                  href="#solutions"
+                  className="lx-btn lx-btn-outline lx-btn-lg"
+                >
+                  {t.heroSecondary}
+                </a>
+              </div>
+              <p className="lx-disclaimer-tiny">{t.heroTiny}</p>
+            </div>
+          </div>
+        </section>
+
+        <div className="lx-disclaimer">
+          <div className="lx-container">
+            <div className="lx-disclaimer-inner">
+              <p className="lx-disclaimer-text">{t.disclaimer}</p>
+            </div>
           </div>
         </div>
-      </footer>
+
+        <section className="lx-stats">
+          <div className="lx-container">
+            <div className="lx-stats-grid">
+              {stats.map((item) => (
+                <div className="lx-stat" key={item.label}>
+                  <div className="lx-stat-num serif">{item.num}</div>
+                  <div className="lx-stat-label">{item.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="lx-section lx-section-alt" id="solutions">
+          <div className="lx-container">
+            <p className="lx-eyebrow" style={{ textAlign: "center" }}>
+              {t.assessmentsEyebrow}
+            </p>
+            <h2 className="lx-h2 serif" style={{ textAlign: "center" }}>
+              {t.assessmentsTitle}
+            </h2>
+            <p
+              className="lx-body"
+              style={{ textAlign: "center", maxWidth: 560, margin: "0 auto" }}
+            >
+              {t.assessmentsBody}
+            </p>
+            <div className="lx-solutions">
+              <div className="lx-solution-card lx-sol-webcam">
+                <div className="lx-sol-bg-deco lx-sol-bg-deco-cyan" />
+                <div className="lx-sol-icon lx-sol-icon-cyan">
+                  <IconEye />
+                </div>
+                <h3 className="lx-sol-h3 serif">{t.webcamTitle}</h3>
+                <p className="lx-sol-body">{t.webcamBody}</p>
+                <ul className="lx-sol-features">
+                  {t.webcamFeatures.map((feature) => (
+                    <li key={feature}>
+                      <span className="check">
+                        <IconCheck />
+                      </span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <span className="lx-sol-tag lx-sol-tag-cyan">
+                  {t.webcamTag}
+                </span>
+              </div>
+
+              <div className="lx-solution-card lx-sol-game">
+                <div className="lx-sol-bg-deco lx-sol-bg-deco-indigo" />
+                <div className="lx-sol-icon lx-sol-icon-indigo">
+                  <IconGame />
+                </div>
+                <h3 className="lx-sol-h3 serif">{t.gameTitle}</h3>
+                <p className="lx-sol-body">{t.gameBody}</p>
+                <ul className="lx-sol-features">
+                  {t.gameFeatures.map((feature) => (
+                    <li key={feature}>
+                      <span className="check">
+                        <IconCheck />
+                      </span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <span className="lx-sol-tag lx-sol-tag-indigo">
+                  {t.gameTag}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="lx-section" id="how-it-works">
+          <div className="lx-container">
+            <p className="lx-eyebrow" style={{ textAlign: "center" }}>
+              {t.stepsEyebrow}
+            </p>
+            <h2 className="lx-h2 serif" style={{ textAlign: "center" }}>
+              {t.stepsTitle}
+            </h2>
+            <div className="lx-steps">
+              {t.steps.map((step) => (
+                <div className="lx-step" key={step.n}>
+                  <div className="lx-step-num serif">{step.n}</div>
+                  <p className="lx-step-h">{step.h}</p>
+                  <p className="lx-step-p">{step.p}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="lx-section lx-section-alt" id="faq">
+          <div className="lx-container">
+            <p className="lx-eyebrow" style={{ textAlign: "center" }}>
+              {t.faqEyebrow}
+            </p>
+            <h2 className="lx-h2 serif" style={{ textAlign: "center" }}>
+              {t.faqTitle}
+            </h2>
+            <div className="lx-faq">
+              {faqs.map((item) => (
+                <details className="lx-faq-item" key={item.q}>
+                  <summary className="lx-faq-summary">{item.q}</summary>
+                  <p className="lx-faq-a">{item.a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="lx-section lx-section-dark">
+          <div className="lx-container">
+            <div className="lx-cta-inner">
+              <p
+                className="lx-eyebrow"
+                style={{ color: "rgba(99,102,241,0.9)" }}
+              >
+                {t.ctaEyebrow}
+              </p>
+              <h2 className="lx-h2-light serif">{t.ctaTitle}</h2>
+              <p className="lx-body-dark lx-body" style={{ marginBottom: 36 }}>
+                {t.ctaBody}
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  justifyContent: "center",
+                  flexWrap: "wrap",
+                }}
+              >
+                <Link
+                  href={localePath(locale, "/signup")}
+                  className="lx-btn lx-btn-primary lx-btn-lg"
+                >
+                  {t.ctaPrimary} <IconArrow />
+                </Link>
+                <Link
+                  href={localePath(locale, "/login")}
+                  className="lx-btn lx-btn-ghost lx-btn-lg"
+                >
+                  {t.ctaSecondary}
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer className="lx-footer">
+          <div className="lx-container">
+            <div className="lx-footer-inner">
+              <span className="lx-footer-logo serif">
+                Lexora<span>.</span>
+              </span>
+              <div className="lx-footer-links">
+                <a href="#faq">{t.footerFaq}</a>
+                <a href="#">{t.footerPrivacy}</a>
+                <a href="#">{t.footerAbout}</a>
+                <Link href={localePath(locale, "/login")}>{t.signIn}</Link>
+              </div>
+              <p style={{ fontSize: 12 }}>{t.footerCopyright}</p>
+            </div>
+          </div>
+        </footer>
+      </div>
     </>
   );
 }

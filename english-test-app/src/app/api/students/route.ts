@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import * as memoryStudentStore from "@/lib/student-store";
 import * as dbStudentStore from "@/lib/db-student-store";
+import { getRequestSession } from "@/lib/auth-session";
 import type { ExamLanguage } from "@/lib/questions";
 import { Demographics } from "@/lib/types";
 
@@ -15,8 +16,13 @@ function resolveExamLanguage(value: unknown): ExamLanguage {
   return value === "ar" ? "ar" : "en";
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const session = await getRequestSession(request);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
     const studentStore = useDatabase ? dbStudentStore : memoryStudentStore;
     const students = await studentStore.listStudentsWithAttempts();
     return NextResponse.json({ students });
@@ -33,6 +39,11 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const session = await getRequestSession(request);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
     const body = (await request.json()) as CreateStudentPayload;
     const demographics = body.demographics;
 

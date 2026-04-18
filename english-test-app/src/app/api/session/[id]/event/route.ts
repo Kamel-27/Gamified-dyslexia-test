@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import * as memorySessionStore from "@/lib/session-store";
 import * as dbSessionStore from "@/lib/db-session-store";
+import { getRequestSession } from "@/lib/auth-session";
 import { SessionEventType } from "@/lib/types";
 
 const useDatabase = process.env.USE_DATABASE === "true";
@@ -13,6 +14,11 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const authSession = await getRequestSession(request);
+  if (!authSession) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   const { id } = await params;
   const body = (await request.json()) as {
     eventType?: string;

@@ -3,10 +3,140 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
+import {
+  type AppLocale,
+  isArabicLocale,
+  localePath,
+  oppositeLocale,
+} from "@/lib/locale";
 
 type Role = "parent" | "educator" | "specialist" | "";
 
-export function SignupPageView() {
+type SignupPageViewProps = {
+  locale?: AppLocale;
+};
+
+const copyByLocale = {
+  en: {
+    roleRequired: "Please select your profile role.",
+    nameRequired: "Please enter your name.",
+    emailRequired: "Please enter your email.",
+    validEmail: "Please enter a valid email address.",
+    passwordLength: "Password must be at least 8 characters.",
+    passwordMismatch: "Passwords do not match.",
+    agreeTerms: "Please accept the terms to continue.",
+    signupFailed: "Unable to create account. Please try again.",
+    backHome: "Back to home",
+    languageSwitch: "العربية",
+    titleStep1: "Create your account",
+    subtitleStep1: "Already have one?",
+    signIn: "Sign in",
+    joinAs: "I am joining as a...",
+    continue: "Continue",
+    titleStep2: "Your details",
+    selectedPrefix: "You selected:",
+    change: "Change",
+    fullName: "Full name",
+    email: "Email address",
+    password: "Password",
+    confirmPassword: "Confirm password",
+    show: "Show",
+    hide: "Hide",
+    minChars: "Min. 8 characters",
+    repeatPassword: "Repeat password",
+    termsText1: "I agree to the",
+    termsText2: "I understand Lexora provides screening estimates only.",
+    create: "Create account",
+    creating: "Creating account...",
+    back: "Back",
+    note: "We store interaction data only. Results are screening estimates, not diagnosis.",
+    leftTitle1: "Start screening.",
+    leftTitle2: "Start supporting.",
+    leftBody:
+      "Create your Lexora account and run your first assessment in under 20 minutes.",
+    features: [
+      "Gamified 15-minute test",
+      "Optional webcam eye-tracking",
+      "Instant risk report",
+      "Encrypted data handling",
+    ],
+    leftDisclaimer:
+      "Lexora is a screening tool only, not a diagnostic instrument.",
+    accountTypeLabel: "Authentication account type",
+    accountTypeValue:
+      "Person account (default). Admin accounts are assigned securely by the owner.",
+    roleParent: "Parent / Guardian",
+    roleParentDesc: "Screening my child",
+    roleTeacher: "Teacher / School",
+    roleTeacherDesc: "Screening students",
+    roleSpecialist: "Specialist / Clinician",
+    roleSpecialistDesc: "Professional use",
+    weak: "Weak",
+    fair: "Fair",
+    good: "Good",
+    strong: "Strong",
+  },
+  ar: {
+    roleRequired: "يرجى اختيار دورك.",
+    nameRequired: "يرجى إدخال الاسم.",
+    emailRequired: "يرجى إدخال البريد الإلكتروني.",
+    validEmail: "يرجى إدخال بريد إلكتروني صحيح.",
+    passwordLength: "يجب أن تكون كلمة المرور 8 أحرف على الأقل.",
+    passwordMismatch: "كلمتا المرور غير متطابقتين.",
+    agreeTerms: "يرجى الموافقة على الشروط للمتابعة.",
+    signupFailed: "تعذر إنشاء الحساب. حاول مرة أخرى.",
+    backHome: "العودة للرئيسية",
+    languageSwitch: "English",
+    titleStep1: "إنشاء حساب جديد",
+    subtitleStep1: "لديك حساب بالفعل؟",
+    signIn: "تسجيل الدخول",
+    joinAs: "سأستخدم المنصة بصفتي...",
+    continue: "متابعة",
+    titleStep2: "بياناتك",
+    selectedPrefix: "اخترت:",
+    change: "تغيير",
+    fullName: "الاسم الكامل",
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    confirmPassword: "تأكيد كلمة المرور",
+    show: "إظهار",
+    hide: "إخفاء",
+    minChars: "8 أحرف على الأقل",
+    repeatPassword: "أعد كتابة كلمة المرور",
+    termsText1: "أوافق على",
+    termsText2: "وأفهم أن Lexora تقدم تقديرات فحص فقط وليست تشخيصا.",
+    create: "إنشاء الحساب",
+    creating: "جاري إنشاء الحساب...",
+    back: "رجوع",
+    note: "نحتفظ ببيانات التفاعل فقط. النتائج تقديرية للفحص وليست تشخيصا.",
+    leftTitle1: "ابدأ الفحص.",
+    leftTitle2: "وابدأ الدعم.",
+    leftBody: "أنشئ حسابك في Lexora وابدأ أول تقييم خلال أقل من 20 دقيقة.",
+    features: [
+      "اختبار تفاعلي خلال 15 دقيقة",
+      "تتبع العين بالكاميرا (اختياري)",
+      "تقرير خطر فوري",
+      "حماية وتشفير للبيانات",
+    ],
+    leftDisclaimer: "Lexora أداة فحص أولي فقط وليست أداة تشخيصية.",
+    accountTypeLabel: "نوع حساب المصادقة",
+    accountTypeValue:
+      "حساب شخصي (افتراضي). حسابات الإدارة يتم تعيينها بشكل آمن بواسطة مالك المنصة.",
+    roleParent: "ولي أمر",
+    roleParentDesc: "لفحص طفلي",
+    roleTeacher: "معلم / مدرسة",
+    roleTeacherDesc: "لفحص الطلاب",
+    roleSpecialist: "أخصائي",
+    roleSpecialistDesc: "استخدام مهني",
+    weak: "ضعيف",
+    fair: "مقبول",
+    good: "جيد",
+    strong: "قوي",
+  },
+} as const;
+
+export function SignupPageView({ locale = "en" }: SignupPageViewProps) {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [role, setRole] = useState<Role>("");
@@ -19,20 +149,24 @@ export function SignupPageView() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const isArabic = isArabicLocale(locale);
+  const t = copyByLocale[locale];
+  const dashboardPath = localePath(locale, "/dashboard");
+
   const roles = [
-    { id: "parent", label: "Parent / Guardian", desc: "Screening my child" },
-    { id: "educator", label: "Teacher / School", desc: "Screening students" },
+    { id: "parent", label: t.roleParent, desc: t.roleParentDesc },
+    { id: "educator", label: t.roleTeacher, desc: t.roleTeacherDesc },
     {
       id: "specialist",
-      label: "Specialist / Clinician",
-      desc: "Professional use",
+      label: t.roleSpecialist,
+      desc: t.roleSpecialistDesc,
     },
   ] as const;
 
   function handleStep1(event: FormEvent) {
     event.preventDefault();
     if (!role) {
-      setError("Please select your role.");
+      setError(t.roleRequired);
       return;
     }
 
@@ -45,36 +179,49 @@ export function SignupPageView() {
     setError("");
 
     if (!name.trim()) {
-      setError("Please enter your name.");
+      setError(t.nameRequired);
       return;
     }
     if (!email.trim()) {
-      setError("Please enter your email.");
+      setError(t.emailRequired);
+      return;
+    }
+    if (!email.includes("@")) {
+      setError(t.validEmail);
       return;
     }
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(t.passwordLength);
       return;
     }
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      setError(t.passwordMismatch);
       return;
     }
     if (!agree) {
-      setError("Please accept the terms to continue.");
+      setError(t.agreeTerms);
       return;
     }
 
     setLoading(true);
 
     try {
-      sessionStorage.setItem(
-        "pendingAccount",
-        JSON.stringify({ name, email, role }),
+      const response = await authClient.signUp.email({
+        name: name.trim(),
+        email: email.trim(),
+        password,
+        callbackURL: dashboardPath,
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || t.signupFailed);
+      }
+
+      router.push(dashboardPath);
+    } catch (signupError) {
+      setError(
+        signupError instanceof Error ? signupError.message : t.signupFailed,
       );
-      router.push("/login");
-    } catch {
-      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -91,7 +238,7 @@ export function SignupPageView() {
             ? 4
             : 3;
 
-  const strengthLabel = ["", "Weak", "Fair", "Good", "Strong"];
+  const strengthLabel = ["", t.weak, t.fair, t.good, t.strong];
   const strengthColor = ["", "#EF4444", "#F59E0B", "#10B981", "#059669"];
 
   return (
@@ -204,7 +351,11 @@ export function SignupPageView() {
         }
       `}</style>
 
-      <div className="auth-page">
+      <div
+        className="auth-page"
+        dir={isArabic ? "rtl" : "ltr"}
+        lang={isArabic ? "ar" : "en"}
+      >
         <div className="auth-left">
           <div className="auth-left-deco-1" />
           <div className="auth-left-deco-2" />
@@ -213,21 +364,13 @@ export function SignupPageView() {
           </div>
           <div className="auth-left-content">
             <h2 className="auth-left-h">
-              Start screening.
+              {t.leftTitle1}
               <br />
-              <em>Start supporting.</em>
+              <em>{t.leftTitle2}</em>
             </h2>
-            <p className="auth-left-p">
-              Create your Lexora account and run your first assessment in under
-              20 minutes.
-            </p>
+            <p className="auth-left-p">{t.leftBody}</p>
             <div className="auth-left-features">
-              {[
-                "Gamified 15-minute test",
-                "Optional webcam eye-tracking",
-                "Instant risk report",
-                "Encrypted data handling",
-              ].map((feature) => (
+              {t.features.map((feature) => (
                 <div className="auth-left-feat" key={feature}>
                   <div className="auth-left-feat-icon">+</div>
                   <span className="auth-left-feat-text">{feature}</span>
@@ -235,15 +378,20 @@ export function SignupPageView() {
               ))}
             </div>
           </div>
-          <p className="auth-left-disclaimer">
-            Lexora is a screening tool only, not a diagnostic instrument.
-          </p>
+          <p className="auth-left-disclaimer">{t.leftDisclaimer}</p>
         </div>
 
         <div className="auth-right">
           <div className="auth-form-wrap">
-            <Link href="/" className="auth-back">
-              Back to home
+            <Link href={localePath(locale, "/")} className="auth-back">
+              {t.backHome}
+            </Link>
+            <Link
+              href={localePath(oppositeLocale(locale), "/signup")}
+              className="auth-back"
+              style={{ marginLeft: 10 }}
+            >
+              {t.languageSwitch}
             </Link>
 
             <div className="auth-steps">
@@ -262,9 +410,10 @@ export function SignupPageView() {
 
             {step === 1 ? (
               <>
-                <h1 className="auth-title">Create your account</h1>
+                <h1 className="auth-title">{t.titleStep1}</h1>
                 <p className="auth-subtitle">
-                  Already have one? <Link href="/login">Sign in</Link>
+                  {t.subtitleStep1}{" "}
+                  <Link href={localePath(locale, "/login")}>{t.signIn}</Link>
                 </p>
 
                 <p
@@ -274,7 +423,7 @@ export function SignupPageView() {
                     marginBottom: 14,
                   }}
                 >
-                  I am joining as a...
+                  {t.joinAs}
                 </p>
 
                 <form onSubmit={handleStep1} noValidate>
@@ -297,15 +446,15 @@ export function SignupPageView() {
                   </div>
 
                   <button type="submit" className="auth-submit">
-                    Continue
+                    {t.continue}
                   </button>
                 </form>
               </>
             ) : (
               <>
-                <h1 className="auth-title">Your details</h1>
+                <h1 className="auth-title">{t.titleStep2}</h1>
                 <p className="auth-subtitle">
-                  You selected:{" "}
+                  {t.selectedPrefix}{" "}
                   <strong style={{ color: "var(--indigo)" }}>
                     {roles.find((entry) => entry.id === role)?.label}
                   </strong>{" "}
@@ -322,7 +471,7 @@ export function SignupPageView() {
                     }}
                     type="button"
                   >
-                    Change
+                    {t.change}
                   </button>
                 </p>
 
@@ -331,7 +480,7 @@ export function SignupPageView() {
 
                   <div className="auth-field">
                     <label className="auth-label" htmlFor="name">
-                      Full name
+                      {t.fullName}
                     </label>
                     <input
                       id="name"
@@ -347,7 +496,7 @@ export function SignupPageView() {
 
                   <div className="auth-field">
                     <label className="auth-label" htmlFor="email">
-                      Email address
+                      {t.email}
                     </label>
                     <input
                       id="email"
@@ -363,14 +512,14 @@ export function SignupPageView() {
 
                   <div className="auth-field">
                     <label className="auth-label" htmlFor="password">
-                      Password
+                      {t.password}
                     </label>
                     <div className="auth-input-wrap">
                       <input
                         id="password"
                         type={showPass ? "text" : "password"}
                         className="auth-input"
-                        placeholder="Min. 8 characters"
+                        placeholder={t.minChars}
                         autoComplete="new-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -382,7 +531,7 @@ export function SignupPageView() {
                         className="auth-input-suffix"
                         onClick={() => setShowPass((value) => !value)}
                       >
-                        {showPass ? "Hide" : "Show"}
+                        {showPass ? t.hide : t.show}
                       </button>
                     </div>
                     {password.length > 0 ? (
@@ -413,13 +562,13 @@ export function SignupPageView() {
 
                   <div className="auth-field">
                     <label className="auth-label" htmlFor="confirm">
-                      Confirm password
+                      {t.confirmPassword}
                     </label>
                     <input
                       id="confirm"
                       type={showPass ? "text" : "password"}
                       className="auth-input"
-                      placeholder="Repeat password"
+                      placeholder={t.repeatPassword}
                       autoComplete="new-password"
                       value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
@@ -435,10 +584,14 @@ export function SignupPageView() {
                       onChange={(e) => setAgree(e.target.checked)}
                     />
                     <label className="auth-check-label" htmlFor="agree">
-                      I agree to the <a href="#">Terms of Service</a> and
-                      <a href="#"> Privacy Policy</a>. I understand Lexora
-                      provides screening estimates only.
+                      {t.termsText1} <a href="#">Terms of Service</a> and
+                      <a href="#"> Privacy Policy</a>. {t.termsText2}
                     </label>
+                  </div>
+
+                  <div className="auth-note" style={{ marginBottom: 14 }}>
+                    <strong>{t.accountTypeLabel}: </strong>
+                    {t.accountTypeValue}
                   </div>
 
                   <button
@@ -446,7 +599,7 @@ export function SignupPageView() {
                     className="auth-submit"
                     disabled={loading}
                   >
-                    {loading ? "Creating account..." : "Create account"}
+                    {loading ? t.creating : t.create}
                   </button>
 
                   <div style={{ marginTop: 10 }}>
@@ -456,17 +609,14 @@ export function SignupPageView() {
                       onClick={() => setStep(1)}
                       disabled={loading}
                     >
-                      Back
+                      {t.back}
                     </button>
                   </div>
                 </form>
               </>
             )}
 
-            <div className="auth-note">
-              We store interaction data only. Results are screening estimates,
-              not diagnosis.
-            </div>
+            <div className="auth-note">{t.note}</div>
           </div>
         </div>
       </div>

@@ -84,9 +84,40 @@ npm run dev
 Create `.env.local` from `.env.example` and point it to your backend:
 
 ```bash
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/lexora
+USE_DATABASE=true
 FASTAPI_URL=http://127.0.0.1:8000
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 ```
+
+For authentication, also configure Better Auth variables:
+
+```bash
+BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_SECRET=<strong-random-secret>
+BETTER_AUTH_TRUSTED_ORIGINS=http://localhost:3000
+BETTER_AUTH_ADMIN_EMAILS=you@example.com
+```
+
+Person vs admin accounts:
+
+- Every new signup gets `person` role by default.
+- Any email listed in `BETTER_AUTH_ADMIN_EMAILS` is auto-assigned `admin` at account creation.
+- This lets you keep normal users as person accounts while reserving admin for your own email.
+
+## Better Auth + Prisma Setup
+
+After pulling latest changes, run:
+
+```bash
+npx prisma generate
+npx prisma migrate dev --name add_better_auth_models
+```
+
+Then start the app and use:
+
+- English auth pages: `/login`, `/signup`
+- Arabic auth pages: `/ar/login`, `/ar/signup`
 
 Open http://localhost:3000
 

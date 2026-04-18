@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   Demographics,
@@ -12,13 +13,18 @@ type SessionEventInput = {
   optionId?: string;
 };
 
+function toInputJson(value: unknown): Prisma.InputJsonValue {
+  // Strip undefined values so payloads are valid JSON for Prisma Json columns.
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
 export async function createSessionForStudent(
   demographics: Demographics,
   studentId?: string,
 ): Promise<SessionRecord> {
   const session = await db.session.create({
     data: {
-      demographics: demographics as any,
+      demographics: toInputJson(demographics),
       studentId,
     },
   });
@@ -75,7 +81,7 @@ export async function addSessionEvent(
     });
 
     return getSession(id);
-  } catch (error) {
+  } catch {
     return undefined;
   }
 }
@@ -89,7 +95,7 @@ export async function completeSession(
       where: { id },
       data: {
         completedAt: new Date(),
-        result: result as any,
+        result: toInputJson(result),
       },
       include: { events: true },
     });
@@ -108,7 +114,7 @@ export async function completeSession(
       })),
       result: session.result as SessionResult | undefined,
     };
-  } catch (error) {
+  } catch {
     return undefined;
   }
 }

@@ -2,12 +2,12 @@ import { LoginPageView } from "@/components/auth/LoginPageView";
 import { getServerSession } from "@/lib/auth-session";
 import { redirect } from "next/navigation";
 
-export default async function LoginPage() {
+export default async function ArabicLoginPage() {
   const session = await getServerSession();
 
   if (session) {
-    redirect("/dashboard");
+    redirect("/ar/dashboard");
   }
 
-  return <LoginPageView locale="en" />;
+  return <LoginPageView locale="ar" />;
 }

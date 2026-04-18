@@ -1,5 +1,5 @@
 import { LandingPageView } from "@/components/marketing/LandingPageView";
 
 export default function Home() {
-  return <LandingPageView />;
+  return <LandingPageView locale="en" />;
 }
