@@ -49,6 +49,8 @@ export default function DashboardPage() {
   const [age, setAge] = useState(10);
   const [nativeLang, setNativeLang] = useState(true);
   const [otherLang, setOtherLang] = useState(false);
+  const [preferredExamLanguage, setPreferredExamLanguage] =
+    useState<ExamLanguage>("en");
 
   async function loadStudents() {
     setLoading(true);
@@ -72,7 +74,8 @@ export default function DashboardPage() {
 
         payload.students.forEach((student) => {
           if (!next[student.id]) {
-            next[student.id] = "en";
+            next[student.id] =
+              student.demographics.preferredExamLanguage ?? "en";
           }
         });
 
@@ -102,7 +105,13 @@ export default function DashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          demographics: { gender, age, nativeLang, otherLang },
+          demographics: {
+            gender,
+            age,
+            nativeLang,
+            otherLang,
+            preferredExamLanguage,
+          },
         }),
       });
 
@@ -112,6 +121,7 @@ export default function DashboardPage() {
       }
 
       setName("");
+      setPreferredExamLanguage("en");
       await loadStudents();
     } catch (createError) {
       setError(
@@ -142,7 +152,12 @@ export default function DashboardPage() {
         throw new Error(payload.error ?? "Unable to start test.");
       }
 
-      router.push(`/test/${payload.sessionId}?lang=${examLanguage}`);
+      const effectiveLanguage = payload.examLanguage ?? examLanguage;
+      const testPath =
+        effectiveLanguage === "ar"
+          ? `/test/ar/${payload.sessionId}`
+          : `/test/en/${payload.sessionId}`;
+      router.push(testPath);
     } catch (startError) {
       setError(
         startError instanceof Error ? startError.message : "Unexpected error.",
@@ -309,6 +324,26 @@ export default function DashboardPage() {
                 </span>
               </label>
 
+              <div>
+                <label
+                  htmlFor="preferredExamLanguage"
+                  className="text-sm font-medium text-slate-700"
+                >
+                  Preferred Exam Language
+                </label>
+                <select
+                  id="preferredExamLanguage"
+                  value={preferredExamLanguage}
+                  onChange={(event) =>
+                    setPreferredExamLanguage(event.target.value as ExamLanguage)
+                  }
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5"
+                >
+                  <option value="en">English</option>
+                  <option value="ar">Arabic</option>
+                </select>
+              </div>
+
               <button
                 type="submit"
                 disabled={saving}
@@ -359,6 +394,12 @@ export default function DashboardPage() {
                           Age {student.demographics.age} |{" "}
                           {student.demographics.gender} | Native English:{" "}
                           {student.demographics.nativeLang ? "Yes" : "No"}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Preferred language: {" "}
+                          {student.demographics.preferredExamLanguage === "ar"
+                            ? "Arabic"
+                            : "English"}
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
                           Same model and age grouping, different language

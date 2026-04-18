@@ -30,7 +30,6 @@ export async function POST(request: Request) {
     }
 
     if (typeof body.studentId === "string" && body.studentId.length > 0) {
-      const examLanguage = resolveExamLanguage(body.examLanguage);
       const studentStore = useDatabase ? dbStudentStore : memoryStudentStore;
       const sessionStore = useDatabase ? dbSessionStore : memorySessionStore;
 
@@ -41,6 +40,10 @@ export async function POST(request: Request) {
           { status: 404 },
         );
       }
+
+      const examLanguage = resolveExamLanguage(
+        body.examLanguage ?? student.demographics.preferredExamLanguage,
+      );
 
       const session = await sessionStore.createSessionForStudent(
         student.demographics,

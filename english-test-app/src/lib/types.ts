@@ -5,6 +5,7 @@ export type Demographics = {
   nativeLang: boolean;
   otherLang: boolean;
   age: number;
+  preferredExamLanguage?: "en" | "ar";
 };
 
 export type QuestionVariant = {

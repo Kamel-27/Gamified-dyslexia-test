@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import * as memoryStudentStore from "@/lib/student-store";
 import * as dbStudentStore from "@/lib/db-student-store";
+import type { ExamLanguage } from "@/lib/questions";
 import { Demographics } from "@/lib/types";
 
 const useDatabase = process.env.USE_DATABASE === "true";
@@ -9,6 +10,10 @@ type CreateStudentPayload = {
   name?: string;
   demographics?: Partial<Demographics>;
 };
+
+function resolveExamLanguage(value: unknown): ExamLanguage {
+  return value === "ar" ? "ar" : "en";
+}
 
 export async function GET() {
   try {
@@ -45,7 +50,10 @@ export async function POST(request: Request) {
       demographics.age > 17 ||
       (demographics.gender !== "male" && demographics.gender !== "female") ||
       typeof demographics.nativeLang !== "boolean" ||
-      typeof demographics.otherLang !== "boolean"
+      typeof demographics.otherLang !== "boolean" ||
+      (demographics.preferredExamLanguage !== undefined &&
+        demographics.preferredExamLanguage !== "en" &&
+        demographics.preferredExamLanguage !== "ar")
     ) {
       return NextResponse.json(
         { error: "Invalid demographics payload." },
@@ -59,6 +67,9 @@ export async function POST(request: Request) {
       gender: demographics.gender,
       nativeLang: demographics.nativeLang,
       otherLang: demographics.otherLang,
+      preferredExamLanguage: resolveExamLanguage(
+        demographics.preferredExamLanguage,
+      ),
     });
 
     return NextResponse.json({ student }, { status: 201 });
