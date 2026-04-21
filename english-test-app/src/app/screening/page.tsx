@@ -1,18 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function ScreeningEntryPage() {
   const [age, setAge] = useState<number | null>(null);
   const [lang, setLang] = useState<"ar" | "en">("ar");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const ageParam = Number(searchParams.get("age"));
-    const langParam = searchParams.get("lang");
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const ageParam = Number(params.get("age"));
+    const langParam = params.get("lang");
 
     if (Number.isInteger(ageParam) && ageParam >= 7 && ageParam <= 12) {
       setAge(ageParam);
@@ -21,7 +25,7 @@ export default function ScreeningEntryPage() {
     if (langParam === "ar" || langParam === "en") {
       setLang(langParam);
     }
-  }, [searchParams]);
+  }, []);
 
   async function start() {
     if (!age) return;
