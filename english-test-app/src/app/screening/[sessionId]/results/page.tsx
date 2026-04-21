@@ -35,8 +35,12 @@ export default async function ResultsPage({
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <div className="text-2xl font-black text-indigo-700 mb-1">Lexora</div>
-          <h1 className="text-xl font-bold text-slate-800">نتيجة فحص الديسلكسيا</h1>
-          <p className="text-sm text-slate-500 mt-1">الطفل: {result.session.childAge} سنوات</p>
+          <h1 className="text-xl font-bold text-slate-800">
+            نتيجة فحص الديسلكسيا
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            الطفل: {result.session.childAge} سنوات
+          </p>
         </div>
 
         <div className="mb-6">
@@ -45,20 +49,32 @@ export default async function ResultsPage({
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6">
           <h2 className="font-bold text-slate-800 mb-2">ماذا بعد؟</h2>
-          <p className="text-slate-600 text-sm leading-relaxed">{NEXT_STEPS[riskBand]}</p>
-          <p className="text-xs text-slate-400 mt-3">هذا اختبار فحص تمهيدي وليس تشخيصاً طبياً.</p>
+          <p className="text-slate-600 text-sm leading-relaxed">
+            {NEXT_STEPS[riskBand]}
+          </p>
+          <p className="text-xs text-slate-400 mt-3">
+            هذا اختبار فحص تمهيدي وليس تشخيصاً طبياً.
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
-            <div className="text-2xl font-black tabular-nums">{Math.round(result.ranAvgMs)}ms</div>
+            <div className="text-2xl font-black tabular-nums">
+              {Math.round(result.ranAvgMs)}ms
+            </div>
             <div className="text-xs text-slate-500 mt-1">متوسط زمن RAN</div>
-            <div className="text-xs text-slate-400">{result.ranAvgMs > 2000 ? "بطيء" : "طبيعي"}</div>
+            <div className="text-xs text-slate-400">
+              {result.ranAvgMs > 2000 ? "بطيء" : "طبيعي"}
+            </div>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
-            <div className="text-2xl font-black tabular-nums">+{Math.round(result.vowelDeltaMs)}ms</div>
+            <div className="text-2xl font-black tabular-nums">
+              +{Math.round(result.vowelDeltaMs)}ms
+            </div>
             <div className="text-xs text-slate-500 mt-1">أثر التشكيل ∆</div>
-            <div className="text-xs text-slate-400">{result.vowelDeltaMs > 8000 ? "فارق كبير" : "طبيعي"}</div>
+            <div className="text-xs text-slate-400">
+              {result.vowelDeltaMs > 8000 ? "فارق كبير" : "طبيعي"}
+            </div>
           </div>
         </div>
 
@@ -70,7 +86,9 @@ export default async function ResultsPage({
               return (
                 <div key={sc.stageId} className="flex items-center gap-3">
                   <div className="w-36 text-xs font-semibold text-slate-700 text-right shrink-0">
-                    {flagged.includes(sc.stageId) && <span className="text-rose-500 ml-1">⚑</span>}
+                    {flagged.includes(sc.stageId) && (
+                      <span className="text-rose-500 ml-1">⚑</span>
+                    )}
                     {meta?.nameAr}
                   </div>
                   <div className="flex-1 h-5 bg-slate-100 rounded-full overflow-hidden">

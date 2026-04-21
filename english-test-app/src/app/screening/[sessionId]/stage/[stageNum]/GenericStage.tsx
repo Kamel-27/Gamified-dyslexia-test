@@ -117,7 +117,9 @@ export function GenericStage({
       timeLimitSeconds={q.timeLimitSeconds}
       onTimeout={handleTimeout}
     >
-      <p className="text-center text-slate-500 mb-4 text-sm">{stage.descriptionAr}</p>
+      <p className="text-center text-slate-500 mb-4 text-sm">
+        {stage.descriptionAr}
+      </p>
 
       <div className="bg-white border border-slate-200 rounded-2xl px-8 py-10 text-center shadow-sm mb-6">
         <div className="text-4xl font-bold text-indigo-900 leading-relaxed">

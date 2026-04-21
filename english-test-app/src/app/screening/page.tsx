@@ -52,7 +52,9 @@ export default function ScreeningEntryPage() {
         <div className="text-center mb-8">
           <div className="text-3xl font-black text-indigo-700 mb-1">Lexora</div>
           <h1 className="text-xl font-bold text-slate-800">فحص الديسلكسيا</h1>
-          <p className="text-sm text-slate-500 mt-2">اختبار فحص تمهيدي - 20-25 دقيقة</p>
+          <p className="text-sm text-slate-500 mt-2">
+            اختبار فحص تمهيدي - 20-25 دقيقة
+          </p>
         </div>
 
         <p className="text-sm font-bold text-slate-700 mb-3">عمر الطفل</p>
