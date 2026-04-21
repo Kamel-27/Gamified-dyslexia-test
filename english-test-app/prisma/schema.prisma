@@ -109,3 +109,48 @@ model AuthVerification {
   @@index([identifier])
   @@map("auth_verification")
 }
+
+// -------------------------
+// Dyslexia Screening (separate from Rello)
+// -------------------------
+
+model ScreeningSession {
+  id          String   @id @default(cuid())
+  childAge    Int
+  language    String   @default("ar")
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  isComplete  Boolean  @default(false)
+  responses   ScreeningResponse[]
+  result      ScreeningResult?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ScreeningResponse {
+  id               String           @id @default(cuid())
+  sessionId        String
+  stageId          String
+  questionId       String
+  chosenIndex      Int?
+  result           String
+  reactionTimeMs   Int
+  timeLimitSeconds Int
+  session          ScreeningSession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+  @@index([sessionId, stageId])
+}
+
+model ScreeningResult {
+  id                String           @id @default(cuid())
+  sessionId         String           @unique
+  totalScore        Float
+  riskBand          String
+  stageScoresJson   String
+  ranAvgMs          Float
+  vowelDeltaMs      Float
+  flaggedStagesJson String
+  computedAt        DateTime         @default(now())
+  session           ScreeningSession @relation(fields: [sessionId], references: [id])
+}

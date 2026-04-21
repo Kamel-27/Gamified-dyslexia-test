@@ -35,7 +35,7 @@ const copyByLocale = {
     badge: "Assessment Console",
     title: "Students, Sessions, and Bilingual Exam Launch",
     subtitle:
-      "Use the same age grouping and prediction models, then choose if each new attempt starts in the English or Arabic exam flow.",
+      "Choose between the Rello exam and the dyslexia screening flow, then launch each attempt in English or Arabic.",
     backToLanding: "Back to Landing",
     switchLanguage: "العربية",
     signedInAs: "Signed in as",
@@ -62,7 +62,7 @@ const copyByLocale = {
     saving: "Saving...",
     studentsHeader: "Existing Students",
     studentsBody:
-      "Select exam language per student before launching a new attempt.",
+      "Select language, then choose which test you want to launch for each student.",
     loading: "Loading students...",
     noStudents: "No students yet. Add your first student from the form.",
     preferred: "Preferred language:",
@@ -71,6 +71,9 @@ const copyByLocale = {
     arabicExam: "Arabic Exam",
     startArabic: "Start Arabic Test",
     startEnglish: "Start English Test",
+    startScreening: "Start Dyslexia Screening",
+    screeningAgeHint: "Screening supports ages 7-12 only.",
+    screeningAgeError: "The screening test is only available for ages 7-12.",
     previousResults: "Previous Results",
     noAttempts: "No attempts yet.",
     inProgress: "In progress",
@@ -85,7 +88,7 @@ const copyByLocale = {
     badge: "لوحة التقييم",
     title: "الطلاب والجلسات وتشغيل الاختبار باللغتين",
     subtitle:
-      "استخدم نفس تقسيم الأعمار ونفس النموذج، ثم اختر بدء كل محاولة جديدة بالمسار العربي أو الإنجليزي.",
+      "اختر بين اختبار Rello ومسار فحص الديسلكسيا، ثم ابدأ كل محاولة بالعربية أو الإنجليزية.",
     backToLanding: "العودة للرئيسية",
     switchLanguage: "English",
     signedInAs: "تسجيل الدخول باسم",
@@ -111,7 +114,7 @@ const copyByLocale = {
     saveStudent: "حفظ الطالب",
     saving: "جاري الحفظ...",
     studentsHeader: "الطلاب الحاليون",
-    studentsBody: "اختر لغة الاختبار لكل طالب قبل بدء محاولة جديدة.",
+    studentsBody: "اختر اللغة ثم حدد نوع الاختبار لكل طالب قبل بدء المحاولة.",
     loading: "جاري تحميل الطلاب...",
     noStudents: "لا يوجد طلاب بعد. أضف أول طالب من النموذج.",
     preferred: "اللغة المفضلة:",
@@ -120,6 +123,9 @@ const copyByLocale = {
     arabicExam: "اختبار عربي",
     startArabic: "ابدأ الاختبار العربي",
     startEnglish: "ابدأ الاختبار الإنجليزي",
+    startScreening: "ابدأ فحص الديسلكسيا",
+    screeningAgeHint: "فحص الديسلكسيا متاح للأعمار 7-12 فقط.",
+    screeningAgeError: "فحص الديسلكسيا متاح فقط للأعمار من 7 إلى 12.",
     previousResults: "النتائج السابقة",
     noAttempts: "لا توجد محاولات بعد.",
     inProgress: "قيد التنفيذ",
@@ -287,6 +293,20 @@ export function DashboardPageView({
         startError instanceof Error ? startError.message : "Unexpected error.",
       );
     }
+  }
+
+  function startScreening(ageValue: number, examLanguage: ExamLanguage) {
+    if (ageValue < 7 || ageValue > 12) {
+      setError(t.screeningAgeError);
+      return;
+    }
+
+    const query = new URLSearchParams({
+      age: String(ageValue),
+      lang: examLanguage,
+    });
+
+    router.push(`/screening?${query.toString()}`);
   }
 
   const dashboardStats = useMemo(() => {
@@ -590,6 +610,29 @@ export function DashboardPageView({
                             ? t.startArabic
                             : t.startEnglish}
                         </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            startScreening(
+                              student.demographics.age,
+                              selectedLanguage,
+                            )
+                          }
+                          disabled={
+                            student.demographics.age < 7 ||
+                            student.demographics.age > 12
+                          }
+                          className="rounded-xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+                        >
+                          {t.startScreening}
+                        </button>
+
+                        {student.demographics.age > 12 ? (
+                          <p className="text-xs text-slate-500">
+                            {t.screeningAgeHint}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
 
